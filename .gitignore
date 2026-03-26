@@ -1,0 +1,15 @@
+# Output data
+*.csv
+*.xlsx
+*_raw_json/
+*_progress.txt
+
+# Temp files
+~$*
+*.zip
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store

@@ -1,0 +1,103 @@
+
+<style>
+  .schema-wrap { font-size: 13px; color: var(--color-text-primary); }
+  .schema-section { margin-bottom: 20px; }
+  .schema-section h3 { font-size: 14px; font-weight: 500; margin: 0 0 8px 0; padding: 6px 10px; border-radius: 6px; }
+  .h-blue  { background: var(--color-background-info);    color: var(--color-text-info); }
+  .h-teal  { background: #E1F5EE; color: #0F6E56; }
+  .h-purple{ background: #EEEDFE; color: #3C3489; }
+  @media (prefers-color-scheme: dark) {
+    .h-teal  { background: #085041; color: #9FE1CB; }
+    .h-purple{ background: #26215C; color: #CEC BF6; }
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 500; font-size: 12px; padding: 5px 8px; border-bottom: 1px solid var(--color-border-secondary); color: var(--color-text-secondary); }
+  td { font-size: 12px; padding: 5px 8px; border-bottom: 1px solid var(--color-border-tertiary); vertical-align: top; }
+  .tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .always  { background:#C0DD97; color:#27500A; }
+  .agency  { background:#FAC775; color:#633806; }
+  .detail  { background:#B5D4F4; color:#0C447C; }
+  .never   { background:#F7C1C1; color:#791F1F; }
+  @media (prefers-color-scheme: dark) {
+    .always { background:#27500A; color:#C0DD97; }
+    .agency { background:#633806; color:#FAC775; }
+    .detail { background:#0C447C; color:#B5D4F4; }
+    .never  { background:#791F1F; color:#F7C1C1; }
+  }
+</style>
+<div class="schema-wrap">
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;font-size:11px;">
+    <span class="tag always">Always public</span> 列表 API 就有，一定拿得到
+    <span class="tag agency">Agency configurable</span> USPTO 可能開放也可能不開放
+    <span class="tag detail">Detail API only</span> 需要打 /comments/{id} 才有
+    <span class="tag never">Never public</span> API 永遠不回傳
+  </div>
+
+  <!-- DOCKET -->
+  <div class="schema-section">
+    <h3 class="h-blue">TABLE 1 — dockets（/v4/dockets/{docketId}）</h3>
+    <table>
+      <tr><th>欄位</th><th>說明</th><th>可用性</th></tr>
+      <tr><td>docket_id</td><td>如 PTO-P-2023-0048</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>title</td><td>規則全名</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>agencyId</td><td>PTO</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>docketType</td><td>Rulemaking / Nonrulemaking ★</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>rin</td><td>Regulation Identifier Number（需用 detail endpoint）</td><td><span class="tag detail">Detail API only</span></td></tr>
+      <tr><td>category</td><td>分類標籤</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>program</td><td>USPTO 計畫名稱</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>keywords</td><td>關鍵字陣列</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>effectiveDate</td><td>規則生效日</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>modifyDate</td><td>最後修改日</td><td><span class="tag always">Always public</span></td></tr>
+    </table>
+  </div>
+
+  <!-- DOCUMENT -->
+  <div class="schema-section">
+    <h3 class="h-teal">TABLE 2 — documents（/v4/documents/{documentId}?include=attachments）</h3>
+    <table>
+      <tr><th>欄位</th><th>說明</th><th>可用性</th></tr>
+      <tr><td>document_id</td><td>如 PTO-P-2023-0048-0001</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>objectId</td><td>★ 查詢 comments 的 key</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>docketId</td><td>所屬 docket</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>documentType</td><td>Proposed Rule / Rule / Supporting & Related / Other</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>subtype</td><td>細分類型</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>title</td><td>文件標題</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>summary</td><td>摘要（Federal Register 摘錄）</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>frDocNum</td><td>Federal Register 文件號碼</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>cfrPart</td><td>Code of Federal Regulations 條文</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>postedDate</td><td>發布日期</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>commentStartDate</td><td>開放評論開始日</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>commentEndDate</td><td>評論截止日 ★</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>openForComment</td><td>目前是否開放評論</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>numberOfCommentsReceived</td><td>收到幾筆 comments</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>fileFormats / attachments</td><td>PDF 本文下載連結（需加 ?include=attachments）</td><td><span class="tag detail">Detail API only</span></td></tr>
+      <tr><td>fullTextXmlUrl</td><td>全文 XML 連結</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>withdrawn</td><td>是否已撤回</td><td><span class="tag always">Always public</span></td></tr>
+    </table>
+  </div>
+
+  <!-- COMMENT -->
+  <div class="schema-section">
+    <h3 class="h-purple">TABLE 3 — comments（/v4/comments/{commentId}?include=attachments）</h3>
+    <table>
+      <tr><th>欄位</th><th>說明</th><th>可用性</th></tr>
+      <tr><td>comment_id / trackingNbr</td><td>唯一識別號</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>docketId / documentId / commentOnId</td><td>三層關聯 key</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>documentType</td><td>Public Submission</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>title</td><td>comment 標題</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>comment（全文）</td><td>★ 研究核心，需 detail API 才完整</td><td><span class="tag detail">Detail API only</span></td></tr>
+      <tr><td>docAbstract</td><td>摘要（若有）</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>postedDate / receiveDate / postmarkDate</td><td>三種時間戳</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>firstName / lastName</td><td>個人姓名</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>organization</td><td>★ 機構名稱（分析 commenter 類型的核心欄位）</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>govAgency / govAgencyType</td><td>若 commenter 是政府機關則有值</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>city / stateProvinceRegion / country / zip</td><td>地理資訊</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>pageCount / subtype / legacyId</td><td>附加資訊</td><td><span class="tag agency">Agency configurable</span></td></tr>
+      <tr><td>attachments（含 fileUrl）</td><td>★ PDF 附件下載連結，需加 ?include=attachments</td><td><span class="tag detail">Detail API only</span></td></tr>
+      <tr><td>withdrawn / restrictReasonType</td><td>狀態標記</td><td><span class="tag always">Always public</span></td></tr>
+      <tr><td>address1/2, email, phone, fax</td><td>個人隱私資訊</td><td><span class="tag never">Never public</span></td></tr>
+    </table>
+  </div>
+
+</div>
