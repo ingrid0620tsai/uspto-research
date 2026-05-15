@@ -1,0 +1,2065 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回歸模型設計框架｜USPTO Comment Letter 研究</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --surface: #f8fafc;
+    --surface2: #eef2f7;
+    --border: #d7dee8;
+    --text: #111827;
+    --muted: #5f6b7a;
+    --id: #334f9f;
+    --drop: #b42318;
+    --drop-bg: #fff1f0;
+    --warn: #b45309;
+    --warn-bg: #fff7ed;
+    --calc: #075985;
+    --calc-bg: #eff6ff;
+    --direct: #15803d;
+    --direct-bg: #ecfdf3;
+    --accent: #6d28d9;
+    --accent-bg: #f5f3ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 32px 24px;
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 28px;
+  }
+
+  /* Navigation tabs */
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 6px 6px 0 0;
+    color: var(--muted);
+    border: 1px solid transparent;
+    border-bottom: none;
+    transition: all 0.15s;
+    background: none;
+    font-family: inherit;
+  }
+
+  .tab:hover { color: var(--text); background: var(--surface2); }
+
+  .tab.active {
+    color: var(--text);
+    background: #ffffff;
+    border-color: var(--border);
+    border-bottom: 1px solid #ffffff;
+    margin-bottom: -1px;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Summary bar */
+  .summary-bar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    display: block;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-label { font-size: 11px; color: var(--muted); }
+
+  /* Section headers */
+  .section {
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .section-header:hover { filter: brightness(0.98); }
+
+  .badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .section-title { font-weight: 700; font-size: 14px; }
+  .section-desc { font-size: 12px; margin-left: auto; }
+  .chevron { font-size: 12px; color: var(--muted); transition: transform 0.2s; }
+  .section.open .chevron { transform: rotate(90deg); }
+
+  .section-body { display: none; padding: 0 16px 16px; }
+  .section.open .section-body { display: block; }
+
+  /* Color themes per section */
+  .sec-id .section-header { background: #eef2ff; }
+  .sec-id .badge { background: #dfe7ff; color: var(--id); }
+  .sec-id .section-title { color: var(--id); }
+
+  .sec-drop .section-header { background: var(--drop-bg); }
+  .sec-drop .badge { background: #ffd8d3; color: var(--drop); }
+  .sec-drop .section-title { color: var(--drop); }
+
+  .sec-warn .section-header { background: var(--warn-bg); }
+  .sec-warn .badge { background: #ffedd5; color: var(--warn); }
+  .sec-warn .section-title { color: var(--warn); }
+
+  .sec-calc .section-header { background: var(--calc-bg); }
+  .sec-calc .badge { background: #dbeafe; color: var(--calc); }
+  .sec-calc .section-title { color: var(--calc); }
+
+  .sec-direct .section-header { background: var(--direct-bg); }
+  .sec-direct .badge { background: #dcfce7; color: var(--direct); }
+  .sec-direct .section-title { color: var(--direct); }
+
+  /* Column tables */
+  .col-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 10px;
+  }
+
+  .col-table th {
+    background: var(--surface2);
+    color: #374151;
+    font-weight: 500;
+    padding: 7px 10px;
+    text-align: left;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .col-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+  }
+
+  .col-table tr:last-child td { border-bottom: none; }
+  .col-table tr:hover td { background: #f3f6fb; }
+
+  code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    background: #eef2f7;
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #111827;
+  }
+
+  .formula {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--calc);
+    background: rgba(41, 128, 185, 0.08);
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 500;
+  }
+
+  .tag-must { background: #dcfce7; color: #15803d; }
+  .tag-opt  { background: #ffedd5; color: #b45309; }
+  .tag-skip { background: #fee2e2; color: #b42318; }
+  .tag-log  { background: #f3e8ff; color: #6d28d9; }
+  .tag-ratio{ background: #dbeafe; color: #075985; }
+
+  /* Regression model box */
+  .model-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .model-equation {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 12px 0;
+    line-height: 2;
+    color: #111827;
+  }
+
+  .model-equation .y { color: #b45309; font-weight: 700; }
+  .model-equation .x-must { color: #15803d; font-weight: 700; }
+  .model-equation .x-opt { color: #075985; font-weight: 700; }
+  .model-equation .x-ctrl { color: #6d28d9; font-weight: 700; }
+  .model-equation .sym { color: var(--muted); }
+
+  .legend-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  /* Step flow */
+  .steps { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+
+  .step {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .step-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    background: var(--accent-bg);
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .step-content h4 { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .step-content p { font-size: 12px; color: var(--muted); }
+  .step-content code { color: #111827; }
+
+  .note {
+    background: rgba(230,126,34,0.08);
+    border-left: 3px solid var(--warn);
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+
+  .note strong { color: var(--warn); }
+
+  .info {
+    background: rgba(41,128,185,0.08);
+    border-left: 3px solid var(--calc);
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+
+  .info strong { color: var(--calc); }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .result-card .label {
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  .result-card .value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px;
+    color: var(--text);
+  }
+
+  .report-note {
+    background: #f5f3ff;
+    border: 1px solid #ddd6fe;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .figure-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+
+  .figure-panel img {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    display: block;
+    margin-top: 10px;
+  }
+
+  .coef-table td:nth-child(n+2),
+  .coef-table th:nth-child(n+2) {
+    text-align: right;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .teacher-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .highlight-row td {
+    background: #eafaf0;
+    border-top: 1px solid #bbf7d0;
+    border-bottom: 1px solid #bbf7d0;
+  }
+
+  .caution-row td {
+    background: #fff7e6;
+    border-top: 1px solid #fed7aa;
+    border-bottom: 1px solid #fed7aa;
+  }
+
+  .risk-row td {
+    background: #fff1f0;
+    border-top: 1px solid #fecaca;
+    border-bottom: 1px solid #fecaca;
+  }
+
+  .highlight-row td:first-child,
+  .caution-row td:first-child,
+  .risk-row td:first-child {
+    border-left: 5px solid transparent;
+    font-weight: 700;
+  }
+
+  .highlight-row td:first-child { border-left-color: #16a34a; }
+  .caution-row td:first-child { border-left-color: #f59e0b; }
+  .risk-row td:first-child { border-left-color: #dc2626; }
+
+  .highlight-row:hover td { background: #dcfce7; }
+  .caution-row:hover td { background: #ffedd5; }
+  .risk-row:hover td { background: #fee2e2; }
+
+  .highlight-row td:nth-child(4),
+  .highlight-row td:nth-child(5),
+  .risk-row td:nth-child(4),
+  .risk-row td:nth-child(5),
+  .caution-row td:nth-child(4),
+  .caution-row td:nth-child(5) {
+    font-weight: 700;
+  }
+
+  .impact-badge {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .impact-strong { background: #15803d; }
+  .impact-watch { background: #b45309; }
+  .impact-risk { background: #b42318; }
+  .impact-muted { background: #6b7280; }
+
+  .model-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin: 0 0 14px;
+  }
+
+  .model-filter button {
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .model-filter button.active,
+  .model-filter button:hover {
+    border-color: #2563eb;
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .teacher-result-section.is-hidden,
+  .teacher-finding-row.is-hidden {
+    display: none;
+  }
+
+  .flow-chart {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .flow-step {
+    border: 1px solid var(--border);
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 116px;
+    position: relative;
+  }
+
+  .flow-step::after {
+    content: ">";
+    position: absolute;
+    right: -10px;
+    top: 44px;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .flow-step:last-child::after { content: ""; }
+
+  .flow-num {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--calc);
+    font-weight: 700;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+
+  .flow-title {
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 5px;
+  }
+
+  .flow-text {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+
+  .detail-block {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #ffffff;
+    margin: 10px 0;
+    overflow: hidden;
+  }
+
+  .detail-block summary {
+    cursor: pointer;
+    padding: 12px 14px;
+    font-weight: 700;
+    color: var(--text);
+    background: #f8fafc;
+  }
+
+  .detail-help {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.55;
+    padding: 12px 14px 0;
+  }
+
+  .table-scroll {
+    max-height: 520px;
+    overflow: auto;
+    padding: 12px 14px 14px;
+  }
+
+  .table-scroll table {
+    min-width: 1120px;
+  }
+
+  .chart-reading {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .chart-reading div {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: #ffffff;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  .chart-reading strong {
+    color: var(--text);
+    display: block;
+    margin-bottom: 3px;
+  }
+
+  .good {
+    color: #15803d;
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    border-radius: 999px;
+    padding: 1px 7px;
+    font-weight: 700;
+  }
+
+  .bad {
+    color: #b42318;
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    border-radius: 999px;
+    padding: 1px 7px;
+    font-weight: 700;
+  }
+
+  .weak {
+    color: #b45309;
+    background: #ffedd5;
+    border: 1px solid #fdba74;
+    border-radius: 999px;
+    padding: 1px 7px;
+    font-weight: 700;
+  }
+
+  @media (max-width: 980px) {
+    .teacher-grid { grid-template-columns: 1fr; }
+    .flow-chart { grid-template-columns: 1fr 1fr; }
+    .flow-step::after { content: ""; }
+  }
+</style>
+</head>
+<body>
+
+<h1>回歸模型設計框架</h1>
+<p class="subtitle">USPTO Comment Letter 研究｜prior_fyear_only (2) sheet｜71 家公司 × 519 欄</p>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('overview')">欄位分類總覽</button>
+  <button class="tab" onclick="switchTab('calc')">需計算的指標（X 變數）</button>
+  <button class="tab" onclick="switchTab('model')">最終回歸模型設計</button>
+  <button class="tab" onclick="switchTab('results')">回歸結果與統計解釋</button>
+  <button class="tab" onclick="switchTab('teacher')">老師 Overview</button>
+  <button class="tab" onclick="switchTab('methodaudit')">資料處理與模型方法</button>
+  <button class="tab" onclick="switchTab('model2method')">Model 2 產業控制做法</button>
+  <button class="tab" onclick="switchTab('steps')">給 Claude Code 的步驟</button>
+</div>
+
+<!-- ===== TAB 1: OVERVIEW ===== -->
+<div class="panel active" id="panel-overview">
+
+  <div class="summary-bar">
+    <div class="stat-box">
+      <span class="stat-num" style="color:var(--muted)">519</span>
+      <span class="stat-label">總欄位數</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-num" style="color:var(--id)">~50</span>
+      <span class="stat-label">識別欄位（不放回歸）</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-num" style="color:var(--drop)">~220</span>
+      <span class="stat-label">大量缺失欄位（直接丟棄）</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-num" style="color:var(--warn)">~220</span>
+      <span class="stat-label">金額原始欄位（需轉換）</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-num" style="color:var(--direct)">~30</span>
+      <span class="stat-label">可直接用的欄位</span>
+    </div>
+  </div>
+
+  <!-- Category 1: ID columns -->
+  <div class="section sec-id open">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="badge">A 類</span>
+      <span class="section-title">識別欄位 ── 不能放進回歸</span>
+      <span class="section-desc" style="color:var(--id)">~50 個</span>
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-body">
+      <p style="color:var(--muted); font-size:12px; margin-bottom:10px">這些欄位是「名字牌」，不是數值特徵。放進回歸沒有任何意義，而且可能造成錯誤。你需要保留這些欄位，但只是用來合併資料，不放進回歸。</p>
+      <table class="col-table">
+        <tr><th>欄位名稱</th><th>說明</th><th>用途</th></tr>
+        <tr><td><code>final_comment_id</code></td><td>Comment letter 的 ID</td><td>合併 CAR 資料用的 key</td></tr>
+        <tr><td><code>final_PERMNO</code></td><td>CRSP 股票識別碼</td><td>合併 CAR 資料用的 key</td></tr>
+        <tr><td><code>final_Ticker</code></td><td>股票代號</td><td>人工確認用</td></tr>
+        <tr><td><code>gvkey</code></td><td>Compustat 公司 ID</td><td>資料識別</td></tr>
+        <tr><td><code>cik</code></td><td>SEC 公司 ID</td><td>資料識別</td></tr>
+        <tr><td><code>datadate</code></td><td>財務資料日期</td><td>確認年份用</td></tr>
+        <tr><td><code>fyear</code></td><td>會計年度</td><td>確認年份用</td></tr>
+        <tr><td><code>sic / sich / naics / naicsh</code></td><td>產業分類代碼</td><td>控制產業固定效果用（轉成 dummy）</td></tr>
+        <tr><td><code>gsector / ggroup / gind / gsubind</code></td><td>GICS 產業分類</td><td>同上（擇一使用）</td></tr>
+        <tr><td><code>conm / tic</code></td><td>公司名稱 / Ticker</td><td>文字，不放回歸</td></tr>
+        <tr><td><code>fic / loc / state</code></td><td>公司所在國家/地區</td><td>文字，可轉 dummy（US/非US）</td></tr>
+        <tr><td><code>exchg</code></td><td>掛牌交易所代碼</td><td>可轉 dummy（NYSE/NASDAQ）</td></tr>
+        <tr><td><code>curcd / curncd</code></td><td>貨幣代碼</td><td>你的樣本都是 USD，不需要</td></tr>
+        <tr><td><code>ajex / ajp / adjex_c / adjex_f</code></td><td>拆股調整係數</td><td>只用來調整股價，不放回歸</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Category 2: Drop columns -->
+  <div class="section sec-drop">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="badge">B 類</span>
+      <span class="section-title">大量缺失欄位 ── 直接丟棄</span>
+      <span class="section-desc" style="color:var(--drop)">~220 個，低於 50% 非空</span>
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-body">
+      <p style="color:var(--muted); font-size:12px; margin-bottom:10px">你有 71 家公司，這些欄位超過一半都是空白。代表只有特定產業（例如銀行、保險、公用事業）才有這些數字，其他公司根本沒有。放進回歸後：樣本數會從 71 家大幅縮減，而且結果不代表整體樣本。</p>
+      <div class="note"><strong>代表性欄位舉例：</strong>銀行業的存款相關欄位（<code>drc</code> 遞延收入、<code>drlt</code> 長期遞延）、保險業準備金、金融機構特有的 <code>fin*</code> 系列欄位（<code>finaco</code>, <code>findlc</code>, <code>findlt</code>...）、衍生性金融商品欄位（<code>derac</code>, <code>derlc</code>）等。這些 219 個欄位低於 80% 非空，你只需要把他們全部排除。</div>
+    </div>
+  </div>
+
+  <!-- Category 3: Raw dollar amounts -->
+  <div class="section sec-warn">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="badge">C 類</span>
+      <span class="section-title">金額原始欄位 ── 需要轉換後才能用</span>
+      <span class="section-desc" style="color:var(--warn)">~220 個，80%+ 有值但是金額</span>
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-body">
+      <p style="color:var(--muted); font-size:12px; margin-bottom:10px">這是你的「原材料」。這些欄位資料完整、有變異，但是「百萬美元」單位的金額——你不能直接放進回歸，因為公司規模差距太大。解法是兩種：<br><br>
+      <strong style="color:var(--text)">① 除以總資產（at）→ 變成比率</strong>，讓大公司和小公司可以比較<br>
+      <strong style="color:var(--text)">② 取對數 log(x)→ 壓縮極端值</strong>，適用於規模類指標</p>
+      <table class="col-table">
+        <tr><th>原始欄位</th><th>說明</th><th>轉換方式</th><th>轉換後指標名</th></tr>
+        <tr><td><code>at</code></td><td>總資產</td><td><span class="tag tag-log">取對數</span></td><td><span class="formula">log(at) → Size</span></td></tr>
+        <tr><td><code>sale / revt</code></td><td>營收（兩者相同）</td><td><span class="tag tag-log">取對數</span> 或 <span class="tag tag-ratio">除 at</span></td><td><span class="formula">log(sale) → Log_Sales</span></td></tr>
+        <tr><td><code>ni</code></td><td>淨利</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">ni/at → ROA</span></td></tr>
+        <tr><td><code>oibdp / ebitda</code></td><td>EBITDA（兩者相同）</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">ebitda/at → EBITDA_ratio</span></td></tr>
+        <tr><td><code>dltt</code></td><td>長期負債</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">dltt/at → Leverage</span></td></tr>
+        <tr><td><code>dltt + dlc</code></td><td>總負債（長短期合計）</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">(dltt+dlc)/at → Total_Leverage</span></td></tr>
+        <tr><td><code>che</code></td><td>現金及約當現金</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">che/at → Cash</span></td></tr>
+        <tr><td><code>capx</code></td><td>資本支出</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">capx/at → CAPEX</span></td></tr>
+        <tr><td><code>ppent</code></td><td>淨固定資產</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">ppent/at → PPE</span></td></tr>
+        <tr><td><code>xsga</code></td><td>銷售管理費用</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">xsga/at → SGA</span></td></tr>
+        <tr><td><code>xrd</code></td><td>研發費用</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">xrd/at → RD</span></td></tr>
+        <tr><td><code>oancf</code></td><td>營業現金流</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">oancf/at → CFO</span></td></tr>
+        <tr><td><code>txt</code></td><td>所得稅</td><td><span class="tag tag-ratio">除 pi（稅前盈餘）</span></td><td><span class="formula">txt/pi → Tax_Rate</span></td></tr>
+        <tr><td><code>gdwl</code></td><td>商譽</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">gdwl/at → Goodwill</span></td></tr>
+        <tr><td><code>intan</code></td><td>無形資產</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">intan/at → Intangible</span></td></tr>
+        <tr><td><code>mkvalt</code> 或 <code>prcc_f×csho</code></td><td>市值</td><td><span class="tag tag-ratio">除 ceq</span></td><td><span class="formula">mkvalt/ceq → MTB</span></td></tr>
+        <tr><td><code>ceq</code></td><td>股東權益帳面值</td><td><span class="tag tag-log">取對數</span> 或 <span class="tag tag-ratio">除 at</span></td><td><span class="formula">ceq/at → Book_Equity_Ratio</span></td></tr>
+        <tr><td><code>lt</code></td><td>總負債</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">lt/at → Debt_Ratio</span></td></tr>
+        <tr><td><code>act</code></td><td>流動資產</td><td><span class="tag tag-ratio">除 lct</span></td><td><span class="formula">act/lct → Current_Ratio</span></td></tr>
+        <tr><td><code>wcap</code></td><td>營運資金</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">wcap/at → Working_Capital</span></td></tr>
+        <tr><td><code>dp</code></td><td>折舊</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">dp/at → Depreciation</span></td></tr>
+        <tr><td><code>xint</code></td><td>利息費用</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">xint/at → Interest_Expense</span></td></tr>
+        <tr><td><code>dvc</code></td><td>發放現金股利</td><td><span class="tag tag-ratio">除 ni</span></td><td><span class="formula">dvc/ni → Payout_Ratio</span></td></tr>
+        <tr><td><code>prstkc</code></td><td>買回庫藏股</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">prstkc/at → Buyback</span></td></tr>
+        <tr><td><code>aqc</code></td><td>購併支出</td><td><span class="tag tag-ratio">除 at</span></td><td><span class="formula">aqc/at → M&A_Activity</span></td></tr>
+        <tr><td><code>emp</code></td><td>員工人數（千人）</td><td><span class="tag tag-log">取對數</span></td><td><span class="formula">log(emp+1) → Log_Emp</span></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Category 4: Directly usable -->
+  <div class="section sec-direct">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="badge">D 類</span>
+      <span class="section-title">可直接放進回歸的欄位</span>
+      <span class="section-desc" style="color:var(--direct)">~30 個，本身已是比率或標準化數字</span>
+      <span class="chevron">▶</span>
+    </div>
+    <div class="section-body">
+      <p style="color:var(--muted); font-size:12px; margin-bottom:10px">這些欄位本身就已經是「每股」、「每元」或「比率」，不同公司之間可以直接比較，不需要額外轉換。可以直接選出你想要的放進回歸。</p>
+      <table class="col-table">
+        <tr><th>欄位名稱</th><th>說明</th><th>建議用途</th></tr>
+        <tr><td><code>epsfi / epsfx / epspi / epspx</code></td><td>每股盈餘（攤薄/基本）</td><td><span class="tag tag-opt">選用</span> EPS 指標</td></tr>
+        <tr><td><code>opeps / oprepsx</code></td><td>每股營業利益</td><td><span class="tag tag-opt">選用</span></td></tr>
+        <tr><td><code>bkvlps</code></td><td>每股帳面價值</td><td><span class="tag tag-opt">選用</span></td></tr>
+        <tr><td><code>prcc_f / prcc_c</code></td><td>年末股價</td><td>用來算 MTB，不單獨放</td></tr>
+        <tr><td><code>prch_f / prcl_f</code></td><td>年度最高/最低價</td><td>可算 Price_Range = (high-low)/low</td></tr>
+        <tr><td><code>dvpsp_f / dvpsx_f</code></td><td>每股股利</td><td><span class="tag tag-opt">選用</span></td></tr>
+        <tr><td><code>cstkcv</code></td><td>普通股票面價值</td><td>通常不用</td></tr>
+        <tr><td><code>au</code></td><td>審計師代碼（1=Big4）</td><td><span class="tag tag-opt">可轉 dummy</span> Big4=1</td></tr>
+        <tr><td><code>auop / auopic</code></td><td>審計意見代碼</td><td><span class="tag tag-opt">可轉 dummy</span> 無保留=1</td></tr>
+        <tr><td><code>currtr</code></td><td>匯率</td><td>非美元公司才需要，已轉換則不用</td></tr>
+        <tr><td><code>rdipeps / rdipd</code></td><td>每股 R&D 影響額</td><td>通常全為 0，不用</td></tr>
+        <tr><td><code>pstk / pstkn</code></td><td>特別股票面值</td><td>幾乎為 0，不用</td></tr>
+      </table>
+      <div class="info"><strong>注意：</strong>就算是「可直接用」的欄位，你也要先確認他們的分佈是否合理（有無極端值）。建議所有進回歸的變數都做 winsorize 1%-99%。</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== TAB 2: CALCULATED VARIABLES ===== -->
+<div class="panel" id="panel-calc">
+
+  <p style="color:var(--muted); font-size:13px; margin-bottom:16px">以下是你要計算的 X 變數。<strong style="color:var(--text)">Model 1 和 Model 2 以保留樣本數為優先</strong>，只放不會造成 CAR 可用樣本流失的核心控制變數；MTB 與其他補充指標放在 Model 3 做穩健性檢查。</p>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:12px; color: #27ae60">主模型核心指標（8 個）── 放進 Model 1 和 Model 2，保留 67 筆 CAR 樣本</h3>
+    <table class="col-table">
+      <tr><th>指標名稱</th><th>計算公式</th><th>原始欄位</th><th>財務意義</th><th>白話解釋</th></tr>
+      <tr><td><strong>Size</strong></td><td><span class="formula">log(at)</span></td><td><code>at</code></td><td>公司規模</td><td>公司總資產越大，通常代表公司越大。取 log 是為了避免超大型公司把數字拉得太誇張。</td></tr>
+      <tr><td><strong>ROA</strong></td><td><span class="formula">ni / at</span></td><td><code>ni, at</code></td><td>獲利能力</td><td>每 1 元資產能創造多少淨利。數值越高，表示公司把資產轉成獲利的效率越好。</td></tr>
+      <tr><td><strong>Leverage</strong></td><td><span class="formula">(dltt + dlc) / at</span></td><td><code>dltt, dlc, at</code></td><td>財務槓桿</td><td>公司資產中有多少比例是靠有息負債支撐。越高代表債務壓力可能越大，但也可能代表公司更積極使用借款。</td></tr>
+      <tr><td><strong>Cash</strong></td><td><span class="formula">che / at</span></td><td><code>che, at</code></td><td>現金充裕度</td><td>資產裡有多少比例是現金或接近現金的資產。越高通常代表公司流動性較好、短期資金壓力較小。</td></tr>
+      <tr><td><strong>CAPEX</strong></td><td><span class="formula">capx / at</span></td><td><code>capx, at</code></td><td>資本支出強度</td><td>公司相對於資產規模，投入多少錢在廠房、設備、長期資產。越高代表公司可能正在擴張或更新產能。</td></tr>
+      <tr><td><strong>PPE</strong></td><td><span class="formula">ppent / at</span></td><td><code>ppent, at</code></td><td>固定資產密集度</td><td>資產中有多少是廠房、設備、機器等實體固定資產。越高通常代表公司比較偏製造、硬體或資產密集產業。</td></tr>
+      <tr><td><strong>RD</strong></td><td><span class="formula">fillna(xrd, 0) / at</span></td><td><code>xrd, at</code></td><td>研發密集度</td><td>公司相對於資產規模投入多少研發費用。這對專利、技術、創新相關研究特別重要。</td></tr>
+      <tr><td><strong>RD_dummy</strong></td><td><span class="formula">1 if xrd 原本有值 else 0</span></td><td><code>xrd</code></td><td>是否有揭露研發支出</td><td>用來區分「公司真的有 R&D 資料」和「R&D 缺值被補 0」。它不是金額，而是一個 0/1 標記。</td></tr>
+    </table>
+    <div class="note" style="margin-top:10px"><strong>Sales Growth 暫時省略：</strong>計算成長率需要前一年的 sale，你目前只有一個年度的資料，所以先跳過。後續如果需要，再另外從 Compustat 補抓前一年資料。</div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:12px; color: #2980b9">補充指標（你可以額外加進去的）</h3>
+    <table class="col-table">
+      <tr><th>指標名稱</th><th>計算公式</th><th>原始欄位</th><th>財務意義</th><th>白話解釋</th></tr>
+      <tr><td><strong>MTB</strong></td><td><span class="formula">mkvalt / ceq</span>；若 <code>mkvalt</code> 缺值，用 <span class="formula">prcc_f × csho / ceq</span></td><td><code>mkvalt, prcc_f, csho, ceq</code></td><td>市場評價與成長機會</td><td>市場給公司的價值相對於帳面股東權益有多高。越高通常代表市場期待較高、成長機會較多，但也可能代表估值偏高。</td></tr>
+      <tr><td><strong>CFO</strong></td><td><span class="formula">oancf / at</span></td><td><code>oancf, at</code></td><td>營運現金流能力</td><td>公司靠本業實際收到多少現金，相對於資產規模。它比淨利更接近「真的有沒有現金進來」。</td></tr>
+      <tr><td><strong>Goodwill</strong></td><td><span class="formula">gdwl / at</span></td><td><code>gdwl, at</code></td><td>商譽密集度</td><td>商譽通常來自併購，代表公司過去買別家公司時，付出的價格高於被買公司可辨認淨資產的部分。</td></tr>
+      <tr><td><strong>Intangible</strong></td><td><span class="formula">intan / at</span></td><td><code>intan, at</code></td><td>無形資產密集度</td><td>資產中有多少是專利、商標、軟體、商譽等看不見的資產。科技、品牌、研發型公司通常可能較高。</td></tr>
+      <tr><td><strong>Current_Ratio</strong></td><td><span class="formula">act / lct</span></td><td><code>act, lct</code></td><td>短期償債能力</td><td>流動資產除以流動負債。大於 1 通常表示短期資產足以覆蓋短期負債，但太高也可能表示資金使用效率不高。</td></tr>
+      <tr><td><strong>Log_Emp</strong></td><td><span class="formula">log(emp + 1)</span></td><td><code>emp</code></td><td>員工規模</td><td>用員工人數衡量公司規模，和 Size 類似但角度不同。取 log 是為了讓超大型公司不要過度影響結果。</td></tr>
+      <tr><td><strong>SGA</strong></td><td><span class="formula">xsga / at</span></td><td><code>xsga, at</code></td><td>銷售與管理費用強度</td><td>公司相對於資產規模花多少在銷售、行政、管理等日常營運費用。目前只計算，不放三個主要模型。</td></tr>
+      <tr><td><strong>Payout</strong></td><td><span class="formula">dvc / ni</span></td><td><code>dvc, ni</code></td><td>股利發放比例</td><td>公司把淨利中的多少比例用現金股利發給股東。若公司虧損，這個比率會難以解釋，所以 <code>ni <= 0</code> 設為 NaN。</td></tr>
+    </table>
+    <div class="note"><strong>關於樣本數：</strong>主模型不放 MTB、SGA、Payout，是因為目前 CAR 有值只有 67 筆；若把缺值較多的控制變數放進 Model 1/2，樣本會降到 47 或更低。Model 3 才加入 MTB 與額外控制，作為穩健性檢查。</div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:12px">原始欄位白話字典</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:10px">下面是計算 X 變數時用到的 Compustat 原始欄位。你可以把它當成對照表：左邊是資料欄位名稱，右邊是它在財務報表中的意思。</p>
+    <table class="col-table">
+      <tr><th>原始欄位</th><th>中文意思</th><th>白話說明</th></tr>
+      <tr><td><code>at</code></td><td>總資產</td><td>公司所有資產的總額，是很多比例指標的分母，用來把不同大小的公司放在同一尺度比較。</td></tr>
+      <tr><td><code>ni</code></td><td>淨利</td><td>公司扣掉成本、費用、稅等之後最後賺到的利潤。</td></tr>
+      <tr><td><code>dltt</code></td><td>長期負債</td><td>一年以上才需要償還的有息債務。</td></tr>
+      <tr><td><code>dlc</code></td><td>短期負債中的有息債務</td><td>一年內到期或需要償還的債務。</td></tr>
+      <tr><td><code>che</code></td><td>現金與約當現金</td><td>公司手上最容易動用的現金或接近現金的資產。</td></tr>
+      <tr><td><code>capx</code></td><td>資本支出</td><td>公司投入在長期資產的支出，例如買設備、建廠、更新產能。</td></tr>
+      <tr><td><code>ppent</code></td><td>淨不動產、廠房與設備</td><td>公司已扣除折舊後的固定資產，例如廠房、設備、機器。</td></tr>
+      <tr><td><code>xrd</code></td><td>研發費用</td><td>公司投入研究、開發、創新的費用。本研究用它計算 RD。</td></tr>
+      <tr><td><code>mkvalt</code></td><td>市場價值</td><td>市場上投資人給公司的股權價值，通常接近股價乘以流通股數。</td></tr>
+      <tr><td><code>prcc_f</code></td><td>會計年度末股價</td><td>公司 fiscal year 結束時的股票價格，用於在 <code>mkvalt</code> 缺值時估算市場價值。</td></tr>
+      <tr><td><code>csho</code></td><td>普通股股數</td><td>公司流通在外的普通股數量。</td></tr>
+      <tr><td><code>ceq</code></td><td>普通股股東權益</td><td>帳面上屬於普通股股東的淨資產，用於計算 MTB。</td></tr>
+      <tr><td><code>oancf</code></td><td>營業活動現金流量</td><td>公司本業營運實際產生的現金流入或流出。</td></tr>
+      <tr><td><code>gdwl</code></td><td>商譽</td><td>通常來自併購，代表買價高於可辨認淨資產的部分。</td></tr>
+      <tr><td><code>intan</code></td><td>無形資產</td><td>專利、商標、軟體、商譽等非實體資產。</td></tr>
+      <tr><td><code>act</code></td><td>流動資產</td><td>一年內可轉成現金或使用的資產，例如現金、應收帳款、存貨。</td></tr>
+      <tr><td><code>lct</code></td><td>流動負債</td><td>一年內需要償還的負債。</td></tr>
+      <tr><td><code>emp</code></td><td>員工人數</td><td>公司雇用的人數，用來衡量另一種公司規模。</td></tr>
+      <tr><td><code>xsga</code></td><td>銷售、一般與管理費用</td><td>公司日常營運、銷售、行政管理相關費用。</td></tr>
+      <tr><td><code>dvc</code></td><td>普通股現金股利</td><td>公司發給普通股股東的現金股利。</td></tr>
+      <tr><td><code>sic</code></td><td>產業分類代碼</td><td>用前兩碼建立 2-digit SIC 產業固定效果，控制不同行業的平均差異。</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<!-- ===== TAB 3: REGRESSION MODEL ===== -->
+<div class="panel" id="panel-model">
+
+  <!-- Answer box: how many models -->
+  <div style="background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.3); border-radius:10px; padding:16px 20px; margin-bottom:20px;">
+    <div style="font-size:15px; font-weight:700; color:#8b5cf6; margin-bottom:8px">你總共跑幾個 model？答案：3 個。</div>
+    <div style="font-size:13px; color:var(--text); line-height:1.8">
+      <strong>Model 1（Column 1）</strong>：8 個核心 X 變數，不加產業固定效果 → 主結果，保留 67 筆 CAR 樣本<br>
+      <strong>Model 2（Column 2）</strong>：同樣 8 個 X 變數，加產業固定效果 → 主結果，保留 67 筆 CAR 樣本<br>
+      <strong>Model 3（Column 3）</strong>：加入 MTB 與額外控制變數，加產業固定效果 → 穩健性檢查，約 59 筆<br>
+      <br>
+      <span style="color:var(--muted)">三個 model 放進論文的同一張表。Model 1 和 Model 2 是主要討論結果，設計重點是保留樣本數；Model 3 用來確認加入 MTB 與更多控制變數後方向是否一致。</span>
+    </div>
+  </div>
+
+  <!-- Model 1 -->
+  <div class="model-box">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px">
+      <span style="background:rgba(39,174,96,0.15); color:#27ae60; font-family:'IBM Plex Mono',monospace; font-size:11px; padding:2px 8px; border-radius:4px; font-weight:600">MODEL 1 — 主要結果</span>
+      <span style="font-size:13px; font-weight:700">不含產業固定效果</span>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:8px">Y = 你算好的 CAR（3-day 或 5-day，選其中一個作為主要結果）</p>
+    <div class="model-equation">
+<span class="y">CAR_i</span> <span class="sym">= β₀</span>
+<span class="sym"> + β₁ ×</span> <span class="x-must">Size_i</span>
+<span class="sym"> + β₂ ×</span> <span class="x-must">ROA_i</span>
+<span class="sym"> + β₃ ×</span> <span class="x-must">Leverage_i</span>
+<span class="sym"> + β₄ ×</span> <span class="x-must">Cash_i</span>
+<span class="sym"> + β₅ ×</span> <span class="x-must">CAPEX_i</span>
+<span class="sym"> + β₆ ×</span> <span class="x-must">PPE_i</span>
+<span class="sym"> + β₇ ×</span> <span class="x-must">RD_i</span>
+<span class="sym"> + β₈ ×</span> <span class="x-must">RD_dummy_i</span>
+<span class="sym"> + ε_i</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="dot" style="background:#27ae60"></span> 核心 X 變數（8 個）</span>
+      <span class="legend-item" style="color:var(--muted); font-size:11px">目前實作結果：N = 67</span>
+    </div>
+    <div style="margin-top:10px; padding:8px 12px; background:rgba(39,174,96,0.06); border-left:3px solid #27ae60; border-radius:0 6px 6px 0; font-size:12px; color:var(--muted)">
+      <strong style="color:#27ae60">風險：低。</strong> 不放 MTB、SGA、Payout，因此不會因這些缺值額外損失樣本。這是論文的核心依據。
+    </div>
+  </div>
+
+  <!-- Model 2 -->
+  <div class="model-box">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px">
+      <span style="background:rgba(41,128,185,0.15); color:#2980b9; font-family:'IBM Plex Mono',monospace; font-size:11px; padding:2px 8px; border-radius:4px; font-weight:600">MODEL 2 — 加入產業控制</span>
+      <span style="font-size:13px; font-weight:700">含產業固定效果（Industry FE）</span>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:8px">X 變數完全一樣，只多加一組產業 dummy（用 SIC 前 2 位數字分類）</p>
+    <div class="model-equation">
+<span class="y">CAR_i</span> <span class="sym">= β₀</span>
+<span class="sym"> + β₁ ×</span> <span class="x-must">Size_i</span>
+<span class="sym"> + β₂ ×</span> <span class="x-must">ROA_i</span>
+<span class="sym"> + β₃ ×</span> <span class="x-must">Leverage_i</span>
+<span class="sym"> + β₄ ×</span> <span class="x-must">Cash_i</span>
+<span class="sym"> + β₅ ×</span> <span class="x-must">CAPEX_i</span>
+<span class="sym"> + β₆ ×</span> <span class="x-must">PPE_i</span>
+<span class="sym"> + β₇ ×</span> <span class="x-must">RD_i</span>
+<span class="sym"> + β₈ ×</span> <span class="x-must">RD_dummy_i</span>
+<span class="sym"> + </span><span class="x-ctrl">Industry_FE</span>
+<span class="sym"> + ε_i</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="dot" style="background:#27ae60"></span> 核心 X 變數（8 個）</span>
+      <span class="legend-item"><span class="dot" style="background:#8b5cf6"></span> 產業固定效果（Industry FE）</span>
+    </div>
+    <div style="margin-top:10px; padding:8px 12px; background:rgba(41,128,185,0.06); border-left:3px solid #2980b9; border-radius:0 6px 6px 0; font-size:12px; color:var(--muted)">
+      <strong style="color:#2980b9">風險：中低。</strong> 產業 dummy 會用掉額外自由度（有幾個產業就少幾個自由度），若你的 71 家公司產業過度集中（例如全在同一個 SIC），這個 model 可能無法收斂或產業 dummy 完全沒有意義。執行後先確認產業分布是否合理。
+    </div>
+  </div>
+
+  <!-- Model 3 -->
+  <div class="model-box">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px">
+      <span style="background:rgba(230,126,34,0.15); color:#e67e22; font-family:'IBM Plex Mono',monospace; font-size:11px; padding:2px 8px; border-radius:4px; font-weight:600">MODEL 3 — 穩健性檢查</span>
+      <span style="font-size:13px; font-weight:700">14 個 X 變數 + 產業固定效果</span>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:8px">在 Model 2 的基礎上，加入 MTB 與 5 個補充指標；SGA、Payout 暫不放入，避免樣本數掉太多</p>
+    <div class="model-equation">
+<span class="y">CAR_i</span> <span class="sym">= β₀</span>
+<span class="sym"> + β₁–β₈ ×</span> <span class="x-must">【Model 2 的 8 個變數】</span>
+<span class="sym"> + β₉ ×</span> <span class="x-opt">MTB</span>
+<span class="sym"> + β₁₀ ×</span> <span class="x-opt">CFO</span>
+<span class="sym"> + β₁₁ ×</span> <span class="x-opt">Goodwill</span>
+<span class="sym"> + β₁₂ ×</span> <span class="x-opt">Intangible</span>
+<span class="sym"> + β₁₃ ×</span> <span class="x-opt">Current_Ratio</span>
+<span class="sym"> + β₁₄ ×</span> <span class="x-opt">Log_Emp</span>
+<span class="sym"> + </span><span class="x-ctrl">Industry_FE</span>
+<span class="sym"> + ε_i</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="dot" style="background:#27ae60"></span> 核心 X 變數（8 個）</span>
+      <span class="legend-item"><span class="dot" style="background:#2980b9"></span> 補充 X 變數（6 個）</span>
+      <span class="legend-item"><span class="dot" style="background:#8b5cf6"></span> 產業固定效果</span>
+    </div>
+    <div style="margin-top:10px; padding:8px 12px; background:rgba(230,126,34,0.06); border-left:3px solid #e67e22; border-radius:0 6px 6px 0; font-size:12px; color:var(--muted)">
+      <strong style="color:#e67e22">風險：中高。</strong> 14 個 X 變數 + 產業 dummy，仍然可能出現以下問題：<br>
+      ① <strong style="color:var(--text)">多重共線性</strong>——多個財務比率互相高度相關（例如 Leverage 和 Goodwill 都跟 at 有關），係數會變得不穩定、標準誤暴增<br>
+      ② <strong style="color:var(--text)">過度配適（overfitting）</strong>——R² 虛高，但模型對新樣本沒有解釋力<br>
+      ③ <strong style="color:var(--text)">部分補充變數缺失值較多</strong>，但已移除 Payout 並用 <code>prcc_f × csho</code> 補 MTB；目前實作結果約 N = 59<br><br>
+      使用方式：只用來告訴指導教授「主要結果在更多控制變數下仍然成立」，不作為主要論述依據。如果 Model 3 裡 Model 1 的核心變數係數方向和顯著性沒有大幅改變，就算成功。
+    </div>
+  </div>
+
+  <!-- Decisions already made -->
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:14px">資料處理方式（已決定，照做即可）</h3>
+
+    <div style="display:flex; flex-direction:column; gap:10px;">
+
+      <div style="display:flex; gap:12px; align-items:flex-start; padding:12px 14px; background:var(--bg); border:1px solid var(--border); border-radius:8px;">
+        <span style="background:rgba(39,174,96,0.15); color:#27ae60; font-family:'IBM Plex Mono',monospace; font-size:11px; padding:2px 8px; border-radius:4px; font-weight:600; white-space:nowrap; margin-top:2px">決定 1</span>
+        <div>
+          <div style="font-weight:700; font-size:13px; margin-bottom:3px">Sales Growth → 省略</div>
+          <div style="font-size:12px; color:var(--muted)">計算成長率需要前一年的 <code>sale</code>，你目前只有一個年度的資料，無法計算。直接省略這個變數。之後若需要補上，再另外從 Compustat 抓前一年資料。</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px; align-items:flex-start; padding:12px 14px; background:var(--bg); border:1px solid var(--border); border-radius:8px;">
+        <span style="background:rgba(39,174,96,0.15); color:#27ae60; font-family:'IBM Plex Mono',monospace; font-size:11px; padding:2px 8px; border-radius:4px; font-weight:600; white-space:nowrap; margin-top:2px">決定 2</span>
+        <div>
+          <div style="font-weight:700; font-size:13px; margin-bottom:3px">RD 缺失值 → 填 0，加 RD_dummy</div>
+          <div style="font-size:12px; color:var(--muted)">很多公司沒有研發費用，<code>xrd</code> 是 NaN 而非 0。處理方式：<strong style="color:var(--text)">NaN 填 0</strong>（代表沒有 R&D 支出），同時建立 <code>RD_dummy</code>（原本有值 = 1，原本是 NaN = 0）一起放進回歸。這樣 71 家公司全部保留，模型也能區分「真的沒有 R&D」和「有 R&D」的公司。</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px; align-items:flex-start; padding:12px 14px; background:var(--bg); border:1px solid var(--border); border-radius:8px;">
+        <span style="background:rgba(39,174,96,0.15); color:#27ae60; font-family:'IBM Plex Mono',monospace; font-size:11px; padding:2px 8px; border-radius:4px; font-weight:600; white-space:nowrap; margin-top:2px">決定 3</span>
+        <div>
+          <div style="font-weight:700; font-size:13px; margin-bottom:3px">MTB / SGA / Payout → 不放 Model 1、2，Model 3 才加入 MTB</div>
+          <div style="font-size:12px; color:var(--muted)">Model 1、2 的目的改為保留樣本數，因此不放會造成缺值刪除的 <code>MTB</code>、<code>SGA</code>、<code>Payout</code>。MTB 在 Model 3 使用：優先 <code>mkvalt/ceq</code>，若 <code>mkvalt</code> 缺值則用 <code>prcc_f × csho / ceq</code>；<code>ceq ≤ 0</code> 仍設為 NaN。</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== TAB 4: TEACHER OVERVIEW ===== -->
+<div class="panel" id="panel-teacher">
+
+  <div class="model-box">
+    <h3 style="font-size:15px; font-weight:700; margin-bottom:10px; color:#8b5cf6">給老師快速檢閱的 Overview</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:8px">
+      本研究使用 <code>0515_final_compustat_firm.xlsx</code> 的 <code>prior_fyear_only (2)</code> sheet。原始資料 71 筆公司/事件觀察值；兩個 CAR 欄位各有 67 筆有效值。主模型刻意把容易造成缺值刪除的 <code>MTB</code>、<code>SGA</code>、<code>Payout</code> 移出 Model 1/2，因此 Model 1/2 都保留 67 筆樣本。
+    </p>
+    <p style="font-size:13px; color:var(--text)">
+      正式解讀以 <span class="good">Model 1</span> 與 <span class="good">Model 2</span> 為主；Model 3 是補充檢查，因為樣本降為 59 且多個變數 VIF 偏高。單變數回歸與散點圖用於視覺化每個變數和 CAR 的簡單關係，但不能取代多元回歸。
+    </p>
+  </div>
+
+  <div class="result-grid">
+    <div class="result-card"><div class="label">原始觀察值</div><div class="value">71</div></div>
+    <div class="result-card"><div class="label">CAR 有效樣本</div><div class="value">67</div></div>
+    <div class="result-card"><div class="label">主模型樣本數</div><div class="value">67</div></div>
+    <div class="result-card"><div class="label">單變數模型</div><div class="value">32</div></div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">資料處理架構圖與過程</h3>
+    <div class="flow-chart">
+      <div class="flow-step">
+        <div class="flow-num">01</div>
+        <div class="flow-title">讀取資料</div>
+        <div class="flow-text">只使用 <code>prior_fyear_only (2)</code>，不合併外部檔案。</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">02</div>
+        <div class="flow-title">保留識別欄位</div>
+        <div class="flow-text">保留 PERMNO、comment id、Ticker、gvkey、fyear、sic、兩個 CAR。</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">03</div>
+        <div class="flow-title">計算財務指標</div>
+        <div class="flow-text">把原始 Compustat 金額轉成 Size、ROA、Leverage、Cash、CAPEX、PPE、RD 等比例或對數指標。</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">04</div>
+        <div class="flow-title">缺失值策略</div>
+        <div class="flow-text"><code>xrd</code> 缺失補 0 並建立 <code>RD_dummy</code>；其他缺值保留，回歸時由完整樣本排除。</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">05</div>
+        <div class="flow-title">Winsorize</div>
+        <div class="flow-text">所有連續財務控制變數做 1% 到 99% 截尾，降低極端值影響；<code>RD_dummy</code> 不截尾。</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">06</div>
+        <div class="flow-title">輸出模型與圖表</div>
+        <div class="flow-text">產出多元回歸、單變數回歸、VIF、熱力圖、係數圖與散點趨勢圖。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="teacher-grid">
+    <div class="model-box">
+      <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">主要發現總表</h3>
+      <p style="font-size:12px; color:var(--muted); margin:0 0 10px">每一列都標出是哪一個 CAR 視窗、哪一個 model、哪一個變數的結果。綠色代表正向顯著或重要訊號，紅色代表負向顯著或重要訊號，橘色代表 10% 弱顯著或需要保守解讀。</p>
+      <div class="model-filter teacher-model-filter" aria-label="主要發現總表篩選">
+        <button class="active" type="button" onclick="filterTeacherResults('all', this)">全部</button>
+        <button type="button" onclick="filterTeacherResults('model1', this)">Model 1</button>
+        <button type="button" onclick="filterTeacherResults('model2', this)">Model 2</button>
+        <button type="button" onclick="filterTeacherResults('model3', this)">Model 3</button>
+      </div>
+      <table class="col-table">
+        <tr><th>CAR 視窗</th><th>Model</th><th>變數</th><th>Coefficient</th><th>p-value</th><th>判讀</th></tr>
+        <tr class="highlight-row teacher-finding-row result-model2"><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>ROA</code></td><td>0.128867</td><td>0.0296169730</td><td><span class="impact-badge impact-strong">重點</span> 正向且 5% 顯著；控制產業後，獲利能力仍和短視窗 CAR 正向相關。</td></tr>
+        <tr class="highlight-row teacher-finding-row result-model2"><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>CAPEX</code></td><td>0.849020</td><td>0.0378471964</td><td><span class="impact-badge impact-strong">重點</span> 正向且 5% 顯著；資本支出強度較高的公司，短視窗市場反應較佳。</td></tr>
+        <tr class="risk-row teacher-finding-row result-model2"><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>RD</code></td><td>-0.271674</td><td>0.0518359740</td><td><span class="impact-badge impact-risk">重點</span> 負向，接近 5%，達 10% 顯著；高研發強度公司短視窗反應較弱。</td></tr>
+        <tr class="caution-row teacher-finding-row result-model2"><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>Size</code></td><td>-0.009190</td><td>0.0743297975</td><td><span class="impact-badge impact-watch">注意</span> 負向，10% 弱顯著；規模效果存在但證據較弱。</td></tr>
+        <tr class="risk-row teacher-finding-row result-model1"><td><code>CAR_m1_p1</code></td><td>Model 1</td><td><code>RD</code></td><td>-0.230071</td><td>0.0338044375</td><td><span class="impact-badge impact-risk">重點</span> 不加產業 FE 時已是負向且 5% 顯著，支持 RD 負向訊號不是只出現在 Model 2。</td></tr>
+        <tr class="highlight-row teacher-finding-row result-model2"><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>ROA</code></td><td>0.203125</td><td>0.0270113148</td><td><span class="impact-badge impact-strong">重點</span> 正向且 5% 顯著；較長 CAR 視窗中，ROA 仍是最穩定的正向變數。</td></tr>
+        <tr class="caution-row teacher-finding-row result-model1"><td><code>CAR_m2_p2</code></td><td>Model 1</td><td><code>CAPEX</code></td><td>0.902108</td><td>0.0578767135</td><td><span class="impact-badge impact-watch">注意</span> 正向，10% 弱顯著；但加入產業 FE 後未達顯著，所以解讀要保守。</td></tr>
+        <tr class="caution-row teacher-finding-row result-model1"><td><code>CAR_m2_p2</code></td><td>Model 1</td><td><code>RD</code></td><td>-0.264902</td><td>0.0916311172</td><td><span class="impact-badge impact-watch">注意</span> 負向，10% 弱顯著；較長視窗也有 RD 負向訊號，但穩定性低於 <code>CAR_m1_p1</code>。</td></tr>
+        <tr class="caution-row teacher-finding-row result-model3"><td><code>兩個 CAR</code></td><td>Model 3</td><td>補充控制變數</td><td>N = 59</td><td>VIF 偏高</td><td><span class="impact-badge impact-watch">注意</span> Model 3 是 robustness check，不建議作主要結論；主要解讀仍以 Model 1/2 為主。</td></tr>
+      </table>
+    </div>
+
+    <div class="model-box">
+      <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">完整分析 Insight</h3>
+      <table class="col-table">
+        <tr><th>主題</th><th>結論</th><th>為什麼這樣解讀</th></tr>
+        <tr><td>核心結論</td><td><span class="good">ROA 是最穩定的正向變數</span></td><td>兩個 CAR 視窗在 Model 2 加入產業固定效果後，ROA 仍達 5% 顯著。</td></tr>
+        <tr><td>投資支出</td><td><span class="good">CAPEX 在較短視窗中有正向訊號</span></td><td><code>CAR_m1_p1</code> 的 Model 1/2 都顯著，代表市場可能較正面看待資本投資能力。</td></tr>
+        <tr><td>研發支出</td><td><span class="bad">RD 呈負向訊號</span></td><td>RD 在主模型多為負，單變數也很強；但它可能代表研發密集公司的風險或不確定性，不能直接解釋為研發不好。</td></tr>
+        <tr><td>產業控制</td><td>Model 2 是最適合報告的主模型</td><td>它保留 67 筆樣本，又控制 2-digit SIC 產業差異，比 Model 1 更嚴謹，比 Model 3 更穩定。</td></tr>
+        <tr><td>補充模型</td><td>Model 3 不建議作主要結論</td><td>Model 3 加入更多變數後樣本減少，且 VIF 顯示多個 X 變數彼此重疊。</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">依模型篩選結果</h3>
+    <p style="font-size:12px; color:var(--muted); margin:0 0 10px">用這裡切換 overview 中要看的結果區塊；下方「完整結果表」會保留，老師要看全部係數時可以直接展開。</p>
+    <div class="model-filter teacher-model-filter" id="teacher-model-filter">
+      <button class="active" type="button" onclick="filterTeacherResults('all', this)">全部</button>
+      <button type="button" onclick="filterTeacherResults('model1', this)">Model 1</button>
+      <button type="button" onclick="filterTeacherResults('model2', this)">Model 2</button>
+      <button type="button" onclick="filterTeacherResults('model3', this)">Model 3</button>
+      <button type="button" onclick="filterTeacherResults('univariate', this)">單變數回歸</button>
+    </div>
+  </div>
+
+  <div class="model-box teacher-result-section result-model1">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">Model 1：核心控制變數，不加產業固定效果</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:10px">Model 1 是最基本的多元回歸：同時放入 8 個核心公司特徵，但不控制產業。它的優點是保留全部 67 筆 CAR 樣本，適合先看公司基本特徵和市場反應的關係。</p>
+    <table class="col-table coef-table">
+      <tr><th>Y</th><th>模型</th><th>變數</th><th>Coefficient</th><th>p-value</th><th>重點判讀</th></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 1</td><td><code>CAPEX</code></td><td>0.589687</td><td>0.0700960310</td><td>正向，10% 弱顯著</td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 1</td><td><code>PPE</code></td><td>-0.119496</td><td>0.0885079011</td><td>負向，10% 弱顯著</td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 1</td><td><code>RD</code></td><td>-0.230071</td><td>0.0338044375</td><td>負向且 5% 顯著</td></tr>
+      <tr class="caution-row"><td><code>CAR_m2_p2</code></td><td>Model 1</td><td><code>ROA</code></td><td>0.122327</td><td>0.0655524207</td><td>正向，10% 弱顯著</td></tr>
+      <tr class="caution-row"><td><code>CAR_m2_p2</code></td><td>Model 1</td><td><code>CAPEX</code></td><td>0.902108</td><td>0.0578767135</td><td>正向，10% 弱顯著</td></tr>
+      <tr class="caution-row"><td><code>CAR_m2_p2</code></td><td>Model 1</td><td><code>RD</code></td><td>-0.264902</td><td>0.0916311172</td><td>負向，10% 弱顯著</td></tr>
+    </table>
+    <div class="info"><strong>Model 1 結論：</strong>在不控制產業差異時，<code>RD</code> 對短視窗 CAR 的負向關係最明顯；<code>CAPEX</code> 則呈現偏正向訊號。這是基準結果，但仍可能混入產業差異。</div>
+  </div>
+
+  <div class="model-box teacher-result-section result-model2">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">Model 2：核心控制變數 + 2-digit SIC 產業固定效果</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:10px">Model 2 是本研究最適合向老師報告的主模型：它和 Model 1 一樣保留 67 筆樣本，但額外控制 2-digit SIC 產業差異，因此比較能回答「在同產業差異被控制後，公司特徵是否仍和 CAR 有關」。</p>
+    <div class="info">
+      <strong>用小學生也能懂的方式理解 Model 2：</strong><br>
+      想像我們要比較同學的考試成績，但有些同學在資優班、有些在普通班、有些在體育班。不同班級本來平均分數就可能不一樣，所以如果直接把所有同學混在一起比，可能會把「班級本來不同」誤看成「某個同學自己的特質造成差異」。<br><br>
+      在這份研究裡，「班級」就是公司所在的產業。科技業、醫療業、零售業、金融業本來就可能有不同的市場反應，所以 Model 2 先把產業差異扣掉，再看公司自己的財務特徵，像 <code>ROA</code>、<code>CAPEX</code>、<code>RD</code>，是否仍然和 CAR 有關。
+    </div>
+    <table class="col-table" style="margin-bottom:12px">
+      <tr><th>概念</th><th>本研究怎麼做</th><th>白話解釋</th></tr>
+      <tr><td>原始產業變數</td><td>使用 Compustat 的 <code>sic</code> 欄位</td><td><code>sic</code> 是公司產業分類代碼，像是公司身上的產業標籤。</td></tr>
+      <tr><td>2-digit SIC</td><td>取 <code>sic</code> 前兩碼，例如 <code>3674</code> 會變成 <code>36</code></td><td>前兩碼代表比較大的產業類別，不會分得太細，適合目前樣本數較小的資料。</td></tr>
+      <tr><td>Dummy 是什麼</td><td>把每個產業轉成 0/1 欄位，例如 <code>sic2_36</code>、<code>sic2_48</code></td><td>Dummy 就是「是或不是」。如果公司屬於 SIC2=48，<code>sic2_48=1</code>；不是就等於 0。</td></tr>
+      <tr><td>Base category</td><td>每次回歸中，樣本數最多的產業當作被省略的基準組；本次 Model 2 的 base 是 <code>36</code></td><td>一定要省略一個產業當作比較基準，不然模型會因為資訊重複而算不出來。</td></tr>
+      <tr><td>Model 2 使用的 X 變數</td><td><code>Size</code>、<code>ROA</code>、<code>Leverage</code>、<code>Cash</code>、<code>CAPEX</code>、<code>PPE</code>、<code>RD</code>、<code>RD_dummy</code>，再加上產業 dummy</td><td>Model 2 和 Model 1 的公司財務變數完全一樣，差別只在 Model 2 多加了產業控制。</td></tr>
+      <tr><td>加入產業控制後差在哪裡</td><td>Model 1 看「全部公司混在一起」；Model 2 看「扣掉產業平均差異後」的公司特徵效果</td><td>如果一個變數在 Model 2 仍顯著，代表它不是只靠產業差異撐起來，結果比較有說服力。</td></tr>
+    </table>
+    <div class="note">
+      <strong>本次結果怎麼看：</strong>加入產業控制後，<code>ROA</code> 在兩個 CAR 視窗都仍然正向且達 5% 顯著，所以它是最穩定的結果；<code>CAPEX</code> 對 <code>CAR_m1_p1</code> 仍正向顯著；<code>RD</code> 對 <code>CAR_m1_p1</code> 仍維持負向並接近 5% 顯著。這就是為什麼正式報告時 Model 2 比 Model 1 更適合作主模型。
+    </div>
+    <table class="col-table" style="margin-bottom:12px">
+      <tr><th>自由度檢查項目</th><th>本次 Model 2 結果</th><th>怎麼解讀</th></tr>
+      <tr><td>樣本數 <code>N</code></td><td>67</td><td>Model 2 沒有讓 CAR 可用樣本變少，這點很好。</td></tr>
+      <tr><td>剩餘自由度 <code>df_resid</code></td><td>45</td><td>產業 dummy 有吃掉自由度，但還沒有低到模型不能用。</td></tr>
+      <tr><td>Base industry</td><td><code>SIC2 = 36</code></td><td>模型把 36 產業當作比較基準，其他產業 dummy 都是相對於它。</td></tr>
+      <tr><td>被排除的 dummy</td><td><code>sic2_58</code></td><td>這個欄位因為 full-rank 檢查被自動排除，目的是避免完全共線性，不是資料壞掉。</td></tr>
+      <tr><td>整體判斷</td><td><span class="good">Model 2 可作為主模型</span></td><td>有自由度成本，但仍保留 45 個剩餘自由度；相較 Model 3，Model 2 更穩定、更適合正式報告。</td></tr>
+    </table>
+    <div class="info">
+      <strong>老師版說法：</strong>Model 2 加入 2-digit SIC industry fixed effects 後確實會消耗自由度，但本研究 Model 2 仍保留 67 筆樣本，剩餘自由度為 45，模型可以正常估計。因此 Model 2 可作為主模型；相較之下，Model 3 因加入更多控制變數後自由度更低且共線性較高，所以僅作為 robustness check。
+    </div>
+    <table class="col-table coef-table">
+      <tr><th>Y</th><th>模型</th><th>變數</th><th>Coefficient</th><th>p-value</th><th>重點判讀</th></tr>
+      <tr class="highlight-row"><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>ROA</code></td><td>0.128867</td><td>0.0296169730</td><td>正向且 5% 顯著</td></tr>
+      <tr class="highlight-row"><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>CAPEX</code></td><td>0.849020</td><td>0.0378471964</td><td>正向且 5% 顯著</td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>RD</code></td><td>-0.271674</td><td>0.0518359740</td><td>負向，接近 5%，達 10% 顯著</td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>Size</code></td><td>-0.009190</td><td>0.0743297975</td><td>負向，10% 弱顯著</td></tr>
+      <tr class="highlight-row"><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>ROA</code></td><td>0.203125</td><td>0.0270113148</td><td>正向且 5% 顯著</td></tr>
+    </table>
+    <div class="info"><strong>Model 2 結論：</strong><code>ROA</code> 是最穩定的正向結果；<code>CAPEX</code> 對 <code>CAR_m1_p1</code> 也呈正向且 5% 顯著；<code>RD</code> 對 <code>CAR_m1_p1</code> 維持負向並接近 5% 顯著。正式討論建議以這個模型為主。</div>
+  </div>
+
+  <div class="figure-panel teacher-result-section result-model2">
+    <h3 style="font-size:14px; font-weight:700;">多元回歸變數影響熱力圖</h3>
+    <p style="font-size:12px; color:var(--muted); margin-top:4px">這張圖放在 Model 1/2 後面，因為它是在比較多元回歸中各變數的統計訊號。藍色為正向，紅色為負向，顏色越深代表 t 值越強。</p>
+    <div class="chart-reading">
+      <div><strong>怎麼看</strong>先看顏色方向，再看顏色深淺；深藍代表較強正向訊號，深紅代表較強負向訊號。</div>
+      <div><strong>圖上重點</strong><code>ROA</code> 在主模型中呈正向；<code>RD</code> 在多個模型中呈負向；<code>CAPEX</code> 在 <code>CAR_m1_p1</code> 中較明顯。</div>
+      <div><strong>Insight</strong>這張圖是用來輔助閱讀 Model 1/2 的係數表；正式結論仍以 Model 2 的 coefficient 與 p-value 為準。</div>
+    </div>
+    <img src="../figures/regression/variable_impact_heatmap.png" alt="Variable Impact Heatmap">
+  </div>
+
+  <div class="model-box teacher-result-section result-model3">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">Model 3：加入 MTB 與補充控制變數的穩健性檢查</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:10px">Model 3 加入 <code>MTB</code>、<code>CFO</code>、<code>Goodwill</code>、<code>Intangible</code>、<code>Current_Ratio</code>、<code>Log_Emp</code>，目的是檢查主結果在更多控制下是否大致一致。因為樣本降為 59 且 VIF 偏高，所以它是補充模型，不建議作為主要結論。</p>
+    <table class="col-table coef-table">
+      <tr><th>Y</th><th>模型</th><th>變數</th><th>Coefficient / VIF</th><th>p-value</th><th>重點判讀</th></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>PPE</code></td><td>0.153499</td><td>0.0800838218</td><td>正向，10% 弱顯著，但不作主結論</td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Goodwill</code></td><td>-0.299316</td><td>0.0472978319</td><td>負向且 5% 顯著，但受共線性影響需保守</td></tr>
+      <tr class="highlight-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Intangible</code></td><td>0.237893</td><td>0.0456954032</td><td>正向且 5% 顯著，但受共線性影響需保守</td></tr>
+      <tr class="risk-row"><td><code>兩個 CAR</code></td><td>Model 3 VIF</td><td><code>Log_Emp</code></td><td>72.0305</td><td></td><td>VIF 很高，代表與其他 X 重疊嚴重</td></tr>
+      <tr class="risk-row"><td><code>兩個 CAR</code></td><td>Model 3 VIF</td><td><code>Size</code></td><td>61.3068</td><td></td><td>VIF 很高，與公司規模相關變數高度重疊</td></tr>
+    </table>
+    <div class="note"><strong>Model 3 結論：</strong>它可以放在附錄或 robustness check，說明加入更多控制後結果仍被檢查過；但由於 N 較小且 VIF 高，不應過度解釋單一變數。</div>
+  </div>
+
+  <div class="model-box teacher-result-section result-univariate">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">單變數回歸：探索每個 X 與 CAR 的簡單關係</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:10px">單變數回歸一次只放一個 X，形式是 <code>CAR = β₀ + β₁X + ε</code>。它很適合畫散點圖與趨勢線，讓老師快速看到原始趨勢；但因為沒有控制其他公司特徵與產業差異，所以不能取代 Model 1/2。</p>
+    <table class="col-table coef-table">
+      <tr><th>Y</th><th>X</th><th>N</th><th>Coefficient</th><th>p-value</th><th>R²</th><th>解讀</th></tr>
+      <tr class="highlight-row"><td><code>CAR_m2_p2</code></td><td><code>ROA</code></td><td>67</td><td>0.210968</td><td>0.0000000040</td><td>0.4153</td><td>簡單關係最強，正向</td></tr>
+      <tr class="highlight-row"><td><code>CAR_m1_p1</code></td><td><code>ROA</code></td><td>67</td><td>0.140215</td><td>0.0000000138</td><td>0.3930</td><td>簡單關係很強，正向</td></tr>
+      <tr class="risk-row"><td><code>CAR_m2_p2</code></td><td><code>RD</code></td><td>67</td><td>-0.492753</td><td>0.0000003194</td><td>0.3330</td><td>簡單關係很強，負向</td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td><code>RD</code></td><td>67</td><td>-0.336550</td><td>0.0000003224</td><td>0.3328</td><td>簡單關係很強，負向</td></tr>
+      <tr class="highlight-row"><td><code>CAR_m2_p2</code></td><td><code>CFO</code></td><td>67</td><td>0.250593</td><td>0.0000005482</td><td>0.3221</td><td>簡單關係很強，正向</td></tr>
+      <tr class="highlight-row"><td><code>CAR_m1_p1</code></td><td><code>CFO</code></td><td>67</td><td>0.168237</td><td>0.0000009429</td><td>0.3111</td><td>簡單關係很強，正向</td></tr>
+    </table>
+    <div class="note"><strong>單變數結論：</strong><code>ROA</code>、<code>CFO</code> 和 CAR 有強正向簡單關係，<code>RD</code> 和 CAR 有強負向簡單關係。不過像 <code>Size</code> 在單變數中為正、在多元 Model 2 中可能轉為負，這正好說明控制其他因素的重要性。</div>
+    <div class="figure-panel">
+      <h3 style="font-size:14px; font-weight:700;">單變數回歸熱力圖</h3>
+      <p style="font-size:12px; color:var(--muted); margin-top:4px">單變數熱力圖用來看每個變數和 CAR 的簡單關係。它很適合直覺展示資料趨勢，但不能控制其他變數。</p>
+      <div class="chart-reading">
+        <div><strong>怎麼看</strong>每一格是一個單變數回歸；藍色代表該 X 和 CAR 正向，紅色代表負向。</div>
+        <div><strong>圖上重點</strong><code>ROA</code>、<code>CFO</code> 呈強正向；<code>RD</code> 呈強負向。</div>
+        <div><strong>Insight</strong>單變數結果提供直覺，但像 <code>Size</code> 這類變數在多元模型中方向可能改變，代表有混雜因素。</div>
+      </div>
+      <img src="../figures/univariate/univariate_heatmap.png" alt="Univariate Regression Heatmap">
+    </div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">完整結果表：可展開檢查</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:10px">上方 overview 只放最重要的發現；如果老師要看完整結果，下面三個區塊可以直接展開。所有 coefficient、p-value、R² 都使用完整小數，不使用科學符號。</p>
+    <details class="detail-block">
+  <summary>展開完整多元回歸結果表：6 組模型、所有係數、標準誤、t 值、p-value</summary>
+  <div class="detail-help">讀法：每一列是一個模型中的一個變數。Coefficient 是方向與大小；p-value 越小，統計證據越強；星號規則為 *** p&lt;0.0100000000、** p&lt;0.0500000000、* p&lt;0.1000000000。產業 dummy 也完整列出，因為 Model 2/3 有加入 2-digit SIC 產業固定效果。</div>
+  <div class="table-scroll">
+    <table class="col-table coef-table">
+      <tr><th>Outcome</th><th>Model</th><th>Variable</th><th>Coefficient</th><th>Std. Err.</th><th>t</th><th>p-value</th><th>Stars</th><th>N</th><th>R²</th><th>Adj. R²</th><th>Industry Base</th><th>Dropped</th></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 1</td><td><code>Intercept</code></td><td>0.043669</td><td>0.066500</td><td>0.6567</td><td>0.5139899384</td><td></td><td>67</td><td>0.4716</td><td>0.3987</td><td></td><td></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 1</td><td><code>Size</code></td><td>-0.001875</td><td>0.003790</td><td>-0.4947</td><td>0.6227124397</td><td></td><td>67</td><td>0.4716</td><td>0.3987</td><td></td><td></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 1</td><td><code>ROA</code></td><td>0.066517</td><td>0.044658</td><td>1.4895</td><td>0.1417826872</td><td></td><td>67</td><td>0.4716</td><td>0.3987</td><td></td><td></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 1</td><td><code>Leverage</code></td><td>-0.031286</td><td>0.032654</td><td>-0.9581</td><td>0.3419890312</td><td></td><td>67</td><td>0.4716</td><td>0.3987</td><td></td><td></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 1</td><td><code>Cash</code></td><td>0.020352</td><td>0.040258</td><td>0.5055</td><td>0.6150986012</td><td></td><td>67</td><td>0.4716</td><td>0.3987</td><td></td><td></td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 1</td><td><code>CAPEX</code></td><td>0.589687</td><td>0.319556</td><td>1.8453</td><td>0.0700960310</td><td>*</td><td>67</td><td>0.4716</td><td>0.3987</td><td></td><td></td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 1</td><td><code>PPE</code></td><td>-0.119496</td><td>0.068975</td><td>-1.7325</td><td>0.0885079011</td><td>*</td><td>67</td><td>0.4716</td><td>0.3987</td><td></td><td></td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 1</td><td><code>RD</code></td><td>-0.230071</td><td>0.105832</td><td>-2.1739</td><td>0.0338044375</td><td>**</td><td>67</td><td>0.4716</td><td>0.3987</td><td></td><td></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 1</td><td><code>RD_dummy</code></td><td>-0.007052</td><td>0.050363</td><td>-0.1400</td><td>0.8891346947</td><td></td><td>67</td><td>0.4716</td><td>0.3987</td><td></td><td></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>Intercept</code></td><td>0.091455</td><td>0.082962</td><td>1.1024</td><td>0.2761574673</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>Size</code></td><td>-0.009190</td><td>0.005030</td><td>-1.8270</td><td>0.0743297975</td><td>*</td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class="highlight-row"><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>ROA</code></td><td>0.128867</td><td>0.057361</td><td>2.2466</td><td>0.0296169730</td><td>**</td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>Leverage</code></td><td>-0.022479</td><td>0.041738</td><td>-0.5386</td><td>0.5928342662</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>Cash</code></td><td>0.021650</td><td>0.045960</td><td>0.4711</td><td>0.6398769946</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class="highlight-row"><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>CAPEX</code></td><td>0.849020</td><td>0.396815</td><td>2.1396</td><td>0.0378471964</td><td>**</td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>PPE</code></td><td>-0.136805</td><td>0.083492</td><td>-1.6385</td><td>0.1082839607</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>RD</code></td><td>-0.271674</td><td>0.136005</td><td>-1.9975</td><td>0.0518359740</td><td>*</td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>RD_dummy</code></td><td>0.021592</td><td>0.059554</td><td>0.3626</td><td>0.7186360784</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>sic2_21</code></td><td>-0.058860</td><td>0.047924</td><td>-1.2282</td><td>0.2257592858</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>sic2_28</code></td><td>0.011305</td><td>0.020978</td><td>0.5389</td><td>0.5926252116</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>sic2_35</code></td><td>-0.017074</td><td>0.021837</td><td>-0.7819</td><td>0.4383713938</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>sic2_37</code></td><td>0.016416</td><td>0.026825</td><td>0.6120</td><td>0.5436462862</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>sic2_38</code></td><td>0.000687</td><td>0.024671</td><td>0.0279</td><td>0.9778978737</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>sic2_39</code></td><td>-0.115751</td><td>0.049982</td><td>-2.3159</td><td>0.0251801820</td><td>**</td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>sic2_48</code></td><td>-0.035038</td><td>0.033804</td><td>-1.0365</td><td>0.3055011003</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>sic2_53</code></td><td>-0.006181</td><td>0.052242</td><td>-0.1183</td><td>0.9063467115</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>sic2_59</code></td><td>-0.013264</td><td>0.037911</td><td>-0.3499</td><td>0.7280731901</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>sic2_67</code></td><td>-0.025693</td><td>0.025997</td><td>-0.9883</td><td>0.3282882075</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>sic2_73</code></td><td>-0.016161</td><td>0.019259</td><td>-0.8391</td><td>0.4058273703</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>sic2_78</code></td><td>-0.035606</td><td>0.043873</td><td>-0.8116</td><td>0.4213064580</td><td></td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 2</td><td><code>sic2_87</code></td><td>0.091714</td><td>0.046756</td><td>1.9616</td><td>0.0560163140</td><td>*</td><td>67</td><td>0.5987</td><td>0.4115</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Intercept</code></td><td>-0.067256</td><td>0.079347</td><td>-0.8476</td><td>0.4027533212</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Size</code></td><td>-0.002608</td><td>0.012464</td><td>-0.2093</td><td>0.8355186828</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>ROA</code></td><td>0.013921</td><td>0.095251</td><td>0.1462</td><td>0.8846915953</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Leverage</code></td><td>0.050537</td><td>0.044490</td><td>1.1359</td><td>0.2641813620</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Cash</code></td><td>0.001268</td><td>0.058593</td><td>0.0216</td><td>0.9828592032</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>CAPEX</code></td><td>-0.130524</td><td>0.306729</td><td>-0.4255</td><td>0.6732088576</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>PPE</code></td><td>0.153499</td><td>0.085005</td><td>1.8058</td><td>0.0800838218</td><td>*</td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>RD</code></td><td>-0.015758</td><td>0.117219</td><td>-0.1344</td><td>0.8938767364</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>MTB</code></td><td>0.000798</td><td>0.000992</td><td>0.8040</td><td>0.4271757352</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>CFO</code></td><td>-0.039634</td><td>0.112048</td><td>-0.3537</td><td>0.7257955892</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Goodwill</code></td><td>-0.299316</td><td>0.145258</td><td>-2.0606</td><td>0.0472978319</td><td>**</td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class="highlight-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Intangible</code></td><td>0.237893</td><td>0.114556</td><td>2.0767</td><td>0.0456954032</td><td>**</td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Current_Ratio</code></td><td>0.010372</td><td>0.006566</td><td>1.5797</td><td>0.1237067122</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Log_Emp</code></td><td>0.009480</td><td>0.014834</td><td>0.6391</td><td>0.5271921941</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_28</code></td><td>-0.053391</td><td>0.030666</td><td>-1.7410</td><td>0.0909932823</td><td>*</td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_35</code></td><td>0.036894</td><td>0.028167</td><td>1.3099</td><td>0.1992903726</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_37</code></td><td>-0.017413</td><td>0.021664</td><td>-0.8038</td><td>0.4272874630</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_38</code></td><td>-0.003202</td><td>0.018104</td><td>-0.1768</td><td>0.8607114667</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_39</code></td><td>-0.027834</td><td>0.040151</td><td>-0.6932</td><td>0.4930207716</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_48</code></td><td>-0.034455</td><td>0.027506</td><td>-1.2526</td><td>0.2191408128</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_53</code></td><td>-0.062507</td><td>0.052518</td><td>-1.1902</td><td>0.2424587692</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_59</code></td><td>-0.072132</td><td>0.042283</td><td>-1.7059</td><td>0.0974184117</td><td>*</td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_67</code></td><td>0.000874</td><td>0.023565</td><td>0.0371</td><td>0.9706480003</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_73</code></td><td>-0.015631</td><td>0.018333</td><td>-0.8526</td><td>0.4000185412</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_78</code></td><td>-0.006713</td><td>0.043692</td><td>-0.1536</td><td>0.8788306301</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_87</code></td><td>-0.062369</td><td>0.043421</td><td>-1.4364</td><td>0.1603067431</td><td></td><td>59</td><td>0.4917</td><td>0.1067</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 1</td><td><code>Intercept</code></td><td>0.044539</td><td>0.097046</td><td>0.4589</td><td>0.6479904636</td><td></td><td>67</td><td>0.4747</td><td>0.4023</td><td></td><td></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 1</td><td><code>Size</code></td><td>-0.004021</td><td>0.005531</td><td>-0.7269</td><td>0.4701855556</td><td></td><td>67</td><td>0.4747</td><td>0.4023</td><td></td><td></td></tr>
+      <tr class="caution-row"><td><code>CAR_m2_p2</code></td><td>Model 1</td><td><code>ROA</code></td><td>0.122327</td><td>0.065172</td><td>1.8770</td><td>0.0655524207</td><td>*</td><td>67</td><td>0.4747</td><td>0.4023</td><td></td><td></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 1</td><td><code>Leverage</code></td><td>-0.029059</td><td>0.047654</td><td>-0.6098</td><td>0.5443854794</td><td></td><td>67</td><td>0.4747</td><td>0.4023</td><td></td><td></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 1</td><td><code>Cash</code></td><td>-0.003682</td><td>0.058751</td><td>-0.0627</td><td>0.9502405352</td><td></td><td>67</td><td>0.4747</td><td>0.4023</td><td></td><td></td></tr>
+      <tr class="caution-row"><td><code>CAR_m2_p2</code></td><td>Model 1</td><td><code>CAPEX</code></td><td>0.902092</td><td>0.466340</td><td>1.9344</td><td>0.0579462442</td><td>*</td><td>67</td><td>0.4747</td><td>0.4023</td><td></td><td></td></tr>
+      <tr class="caution-row"><td><code>CAR_m2_p2</code></td><td>Model 1</td><td><code>PPE</code></td><td>-0.175226</td><td>0.100658</td><td>-1.7408</td><td>0.0870190721</td><td>*</td><td>67</td><td>0.4747</td><td>0.4023</td><td></td><td></td></tr>
+      <tr class="caution-row"><td><code>CAR_m2_p2</code></td><td>Model 1</td><td><code>RD</code></td><td>-0.264943</td><td>0.154444</td><td>-1.7155</td><td>0.0915982858</td><td>*</td><td>67</td><td>0.4747</td><td>0.4023</td><td></td><td></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 1</td><td><code>RD_dummy</code></td><td>0.022649</td><td>0.073497</td><td>0.3082</td><td>0.7590652878</td><td></td><td>67</td><td>0.4747</td><td>0.4023</td><td></td><td></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>Intercept</code></td><td>0.064447</td><td>0.128470</td><td>0.5017</td><td>0.6183585982</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>Size</code></td><td>-0.010456</td><td>0.007790</td><td>-1.3423</td><td>0.1862453484</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class="highlight-row"><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>ROA</code></td><td>0.203071</td><td>0.088826</td><td>2.2862</td><td>0.0270038604</td><td>**</td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>Leverage</code></td><td>-0.019326</td><td>0.064634</td><td>-0.2990</td><td>0.7663123301</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>Cash</code></td><td>0.033501</td><td>0.071171</td><td>0.4707</td><td>0.6401247032</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>CAPEX</code></td><td>0.993165</td><td>0.614490</td><td>1.6162</td><td>0.1130319106</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>PPE</code></td><td>-0.146045</td><td>0.129292</td><td>-1.1296</td><td>0.2646431355</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>RD</code></td><td>-0.271799</td><td>0.210612</td><td>-1.2905</td><td>0.2034607989</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>RD_dummy</code></td><td>0.062579</td><td>0.092223</td><td>0.6786</td><td>0.5008881699</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>sic2_21</code></td><td>-0.084597</td><td>0.074214</td><td>-1.1399</td><td>0.2603511719</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>sic2_28</code></td><td>0.016783</td><td>0.032485</td><td>0.5166</td><td>0.6079402822</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>sic2_35</code></td><td>-0.018470</td><td>0.033816</td><td>-0.5462</td><td>0.5876251106</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>sic2_37</code></td><td>0.002414</td><td>0.041540</td><td>0.0581</td><td>0.9539196364</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>sic2_38</code></td><td>0.000208</td><td>0.038205</td><td>0.0054</td><td>0.9956757812</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>sic2_39</code></td><td>-0.107446</td><td>0.077400</td><td>-1.3882</td><td>0.1719110526</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>sic2_48</code></td><td>-0.080080</td><td>0.052347</td><td>-1.5298</td><td>0.1330681508</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>sic2_53</code></td><td>-0.006146</td><td>0.080899</td><td>-0.0760</td><td>0.9397762014</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>sic2_59</code></td><td>-0.028429</td><td>0.058708</td><td>-0.4842</td><td>0.6305590913</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>sic2_67</code></td><td>-0.046566</td><td>0.040258</td><td>-1.1567</td><td>0.2535045643</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>sic2_73</code></td><td>-0.022295</td><td>0.029824</td><td>-0.7475</td><td>0.4586223537</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>sic2_78</code></td><td>-0.054038</td><td>0.067940</td><td>-0.7954</td><td>0.4305693651</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 2</td><td><code>sic2_87</code></td><td>-0.009455</td><td>0.072403</td><td>-0.1306</td><td>0.8966819271</td><td></td><td>67</td><td>0.5509</td><td>0.3413</td><td>36</td><td>sic2_58</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Intercept</code></td><td>-0.175783</td><td>0.111517</td><td>-1.5763</td><td>0.1244974017</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Size</code></td><td>0.026339</td><td>0.017517</td><td>1.5036</td><td>0.1421924662</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>ROA</code></td><td>-0.194581</td><td>0.133869</td><td>-1.4535</td><td>0.1555253589</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Leverage</code></td><td>0.054721</td><td>0.062529</td><td>0.8751</td><td>0.3878260763</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Cash</code></td><td>-0.021456</td><td>0.082350</td><td>-0.2606</td><td>0.7960583981</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>CAPEX</code></td><td>-0.508048</td><td>0.431090</td><td>-1.1785</td><td>0.2470175747</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>PPE</code></td><td>0.165056</td><td>0.119469</td><td>1.3816</td><td>0.1763830034</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>RD</code></td><td>0.021690</td><td>0.164744</td><td>0.1317</td><td>0.8960552916</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>MTB</code></td><td>-0.000079</td><td>0.001395</td><td>-0.0564</td><td>0.9553455929</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>CFO</code></td><td>0.169594</td><td>0.157476</td><td>1.0769</td><td>0.2893136527</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Goodwill</code></td><td>-0.054118</td><td>0.204152</td><td>-0.2651</td><td>0.7925915784</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Intangible</code></td><td>0.006602</td><td>0.161001</td><td>0.0410</td><td>0.9675368697</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Current_Ratio</code></td><td>-0.000466</td><td>0.009227</td><td>-0.0505</td><td>0.9600458062</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Log_Emp</code></td><td>-0.029052</td><td>0.020849</td><td>-1.3935</td><td>0.1727839870</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_28</code></td><td>-0.018215</td><td>0.043099</td><td>-0.4226</td><td>0.6753060916</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_35</code></td><td>0.017355</td><td>0.039586</td><td>0.4384</td><td>0.6639511145</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_37</code></td><td>-0.039181</td><td>0.030447</td><td>-1.2868</td><td>0.2071027964</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_38</code></td><td>0.017512</td><td>0.025444</td><td>0.6883</td><td>0.4961043977</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_39</code></td><td>-0.016150</td><td>0.056430</td><td>-0.2862</td><td>0.7765162077</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class="risk-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_48</code></td><td>-0.128294</td><td>0.038657</td><td>-3.3187</td><td>0.0022121620</td><td>***</td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_53</code></td><td>0.000700</td><td>0.073811</td><td>0.0095</td><td>0.9924905568</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_59</code></td><td>-0.015901</td><td>0.059426</td><td>-0.2676</td><td>0.7906963231</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_67</code></td><td>-0.024751</td><td>0.033120</td><td>-0.7473</td><td>0.4601562483</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_73</code></td><td>-0.025253</td><td>0.025766</td><td>-0.9801</td><td>0.3341792397</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_78</code></td><td>-0.087243</td><td>0.061407</td><td>-1.4207</td><td>0.1647755548</td><td></td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+      <tr class="risk-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_87</code></td><td>-0.254585</td><td>0.061025</td><td>-4.1718</td><td>0.0002060865</td><td>***</td><td>59</td><td>0.6107</td><td>0.3157</td><td>36</td><td>RD_dummy</td></tr>
+    </table>
+  </div>
+</details>
+    <details class="detail-block">
+  <summary>展開完整單變數回歸結果表：32 組簡單回歸</summary>
+  <div class="detail-help">讀法：單變數回歸一次只放一個 X，適合看原始趨勢與畫散點圖；但沒有控制其他公司特徵與產業差異，所以正式結論仍以多元回歸 Model 1/2 為主。</div>
+  <div class="table-scroll">
+    <table class="col-table coef-table">
+      <tr><th>Outcome</th><th>Variable</th><th>N</th><th>Intercept</th><th>Coefficient</th><th>Std. Err.</th><th>t</th><th>p-value</th><th>Stars</th><th>R²</th><th>Adj. R²</th><th>Interpretation</th><th>Chart</th></tr>
+      <tr class="highlight-row"><td><code>CAR_m1_p1</code></td><td><code>Size</code></td><td>67</td><td>-0.093999</td><td>0.008211</td><td>0.002668</td><td>3.0779</td><td>0.0030510662</td><td>***</td><td>0.1272</td><td>0.1138</td><td>positive; statistically significant at 5%</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_Size.png">圖</a></td></tr>
+      <tr class="highlight-row"><td><code>CAR_m1_p1</code></td><td><code>ROA</code></td><td>67</td><td>-0.012738</td><td>0.140215</td><td>0.021613</td><td>6.4876</td><td>0.0000000138</td><td>***</td><td>0.3930</td><td>0.3837</td><td>positive; statistically significant at 5%</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_ROA.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td><code>Leverage</code></td><td>67</td><td>-0.000397</td><td>-0.041342</td><td>0.033397</td><td>-1.2379</td><td>0.2202089611</td><td></td><td>0.0230</td><td>0.0080</td><td>negative; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_Leverage.png">圖</a></td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td><code>Cash</code></td><td>67</td><td>0.002682</td><td>-0.059544</td><td>0.034902</td><td>-1.7060</td><td>0.0927801851</td><td>*</td><td>0.0429</td><td>0.0281</td><td>negative; weakly significant at 10%</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_Cash.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td><code>CAPEX</code></td><td>67</td><td>-0.018417</td><td>0.190608</td><td>0.187191</td><td>1.0183</td><td>0.3123328165</td><td></td><td>0.0157</td><td>0.0006</td><td>positive; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_CAPEX.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td><code>PPE</code></td><td>67</td><td>-0.006490</td><td>-0.033433</td><td>0.041633</td><td>-0.8030</td><td>0.4248779885</td><td></td><td>0.0098</td><td>-0.0054</td><td>negative; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_PPE.png">圖</a></td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td><code>RD</code></td><td>67</td><td>0.023723</td><td>-0.336550</td><td>0.059103</td><td>-5.6943</td><td>0.0000003224</td><td>***</td><td>0.3328</td><td>0.3226</td><td>negative; statistically significant at 5%</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_RD.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td><code>RD_dummy</code></td><td>67</td><td>-0.007395</td><td>-0.005011</td><td>0.055053</td><td>-0.0910</td><td>0.9277598493</td><td></td><td>0.0001</td><td>-0.0153</td><td>negative; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_RD_dummy.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td><code>MTB</code></td><td>62</td><td>-0.008675</td><td>0.000267</td><td>0.000395</td><td>0.6764</td><td>0.5013749685</td><td></td><td>0.0076</td><td>-0.0090</td><td>positive; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_MTB.png">圖</a></td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td><code>SGA</code></td><td>60</td><td>0.003503</td><td>-0.042593</td><td>0.022431</td><td>-1.8989</td><td>0.0625590794</td><td>*</td><td>0.0585</td><td>0.0423</td><td>negative; weakly significant at 10%</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_SGA.png">圖</a></td></tr>
+      <tr class="highlight-row"><td><code>CAR_m1_p1</code></td><td><code>CFO</code></td><td>67</td><td>-0.024272</td><td>0.168237</td><td>0.031053</td><td>5.4176</td><td>0.0000009429</td><td>***</td><td>0.3111</td><td>0.3005</td><td>positive; statistically significant at 5%</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_CFO.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td><code>Goodwill</code></td><td>64</td><td>-0.022145</td><td>0.066416</td><td>0.054566</td><td>1.2172</td><td>0.2281515426</td><td></td><td>0.0233</td><td>0.0076</td><td>positive; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_Goodwill.png">圖</a></td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td><code>Intangible</code></td><td>65</td><td>-0.026006</td><td>0.059445</td><td>0.033989</td><td>1.7489</td><td>0.0851728773</td><td>*</td><td>0.0463</td><td>0.0312</td><td>positive; weakly significant at 10%</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_Intangible.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td><code>Current_Ratio</code></td><td>67</td><td>-0.012761</td><td>0.000193</td><td>0.004111</td><td>0.0470</td><td>0.9626605666</td><td></td><td>0.0000</td><td>-0.0154</td><td>positive; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_Current_Ratio.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td><code>Payout</code></td><td>48</td><td>-0.006160</td><td>-0.000913</td><td>0.006427</td><td>-0.1421</td><td>0.8876024568</td><td></td><td>0.0004</td><td>-0.0213</td><td>negative; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_Payout.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td><code>Log_Emp</code></td><td>67</td><td>-0.029709</td><td>0.005293</td><td>0.003233</td><td>1.6370</td><td>0.1064733717</td><td></td><td>0.0396</td><td>0.0248</td><td>positive; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m1_p1_Log_Emp.png">圖</a></td></tr>
+      <tr class="highlight-row"><td><code>CAR_m2_p2</code></td><td><code>Size</code></td><td>67</td><td>-0.137865</td><td>0.012624</td><td>0.003875</td><td>3.2576</td><td>0.0017877677</td><td>***</td><td>0.1404</td><td>0.1271</td><td>positive; statistically significant at 5%</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_Size.png">圖</a></td></tr>
+      <tr class="highlight-row"><td><code>CAR_m2_p2</code></td><td><code>ROA</code></td><td>67</td><td>-0.012915</td><td>0.210968</td><td>0.031049</td><td>6.7946</td><td>0.0000000040</td><td>***</td><td>0.4153</td><td>0.4063</td><td>positive; statistically significant at 5%</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_ROA.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td><code>Leverage</code></td><td>67</td><td>0.001964</td><td>-0.049423</td><td>0.049076</td><td>-1.0071</td><td>0.3176345847</td><td></td><td>0.0154</td><td>0.0002</td><td>negative; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_Leverage.png">圖</a></td></tr>
+      <tr class="risk-row"><td><code>CAR_m2_p2</code></td><td><code>Cash</code></td><td>67</td><td>0.015720</td><td>-0.111144</td><td>0.050366</td><td>-2.2067</td><td>0.0308713610</td><td>**</td><td>0.0697</td><td>0.0554</td><td>negative; statistically significant at 5%</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_Cash.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td><code>CAPEX</code></td><td>67</td><td>-0.021102</td><td>0.275612</td><td>0.274048</td><td>1.0057</td><td>0.3182859528</td><td></td><td>0.0153</td><td>0.0002</td><td>positive; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_CAPEX.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td><code>PPE</code></td><td>67</td><td>-0.003240</td><td>-0.051868</td><td>0.060902</td><td>-0.8517</td><td>0.3975319336</td><td></td><td>0.0110</td><td>-0.0042</td><td>negative; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_PPE.png">圖</a></td></tr>
+      <tr class="risk-row"><td><code>CAR_m2_p2</code></td><td><code>RD</code></td><td>67</td><td>0.040486</td><td>-0.492753</td><td>0.086498</td><td>-5.6967</td><td>0.0000003194</td><td>***</td><td>0.3330</td><td>0.3227</td><td>negative; statistically significant at 5%</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_RD.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td><code>RD_dummy</code></td><td>67</td><td>-0.027173</td><td>0.015095</td><td>0.080565</td><td>0.1874</td><td>0.8519555207</td><td></td><td>0.0005</td><td>-0.0148</td><td>positive; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_RD_dummy.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td><code>MTB</code></td><td>62</td><td>-0.007650</td><td>0.000435</td><td>0.000629</td><td>0.6913</td><td>0.4920361528</td><td></td><td>0.0079</td><td>-0.0086</td><td>positive; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_MTB.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td><code>SGA</code></td><td>60</td><td>0.010118</td><td>-0.048873</td><td>0.033205</td><td>-1.4718</td><td>0.1464687762</td><td></td><td>0.0360</td><td>0.0194</td><td>negative; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_SGA.png">圖</a></td></tr>
+      <tr class="highlight-row"><td><code>CAR_m2_p2</code></td><td><code>CFO</code></td><td>67</td><td>-0.030089</td><td>0.250593</td><td>0.045087</td><td>5.5580</td><td>0.0000005482</td><td>***</td><td>0.3221</td><td>0.3117</td><td>positive; statistically significant at 5%</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_CFO.png">圖</a></td></tr>
+      <tr class="caution-row"><td><code>CAR_m2_p2</code></td><td><code>Goodwill</code></td><td>64</td><td>-0.033671</td><td>0.146115</td><td>0.078797</td><td>1.8543</td><td>0.0684523591</td><td>*</td><td>0.0525</td><td>0.0373</td><td>positive; weakly significant at 10%</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_Goodwill.png">圖</a></td></tr>
+      <tr class="highlight-row"><td><code>CAR_m2_p2</code></td><td><code>Intangible</code></td><td>65</td><td>-0.036561</td><td>0.105036</td><td>0.049306</td><td>2.1303</td><td>0.0370595895</td><td>**</td><td>0.0672</td><td>0.0524</td><td>positive; statistically significant at 5%</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_Intangible.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td><code>Current_Ratio</code></td><td>67</td><td>-0.005988</td><td>-0.002841</td><td>0.006008</td><td>-0.4729</td><td>0.6378544478</td><td></td><td>0.0034</td><td>-0.0119</td><td>negative; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_Current_Ratio.png">圖</a></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td><code>Payout</code></td><td>48</td><td>-0.004803</td><td>-0.001175</td><td>0.007572</td><td>-0.1551</td><td>0.8774144584</td><td></td><td>0.0005</td><td>-0.0212</td><td>negative; not statistically significant</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_Payout.png">圖</a></td></tr>
+      <tr class="caution-row"><td><code>CAR_m2_p2</code></td><td><code>Log_Emp</code></td><td>67</td><td>-0.039980</td><td>0.008430</td><td>0.004715</td><td>1.7880</td><td>0.0784353073</td><td>*</td><td>0.0469</td><td>0.0322</td><td>positive; weakly significant at 10%</td><td><a href="../figures/univariate/scatter_CAR_m2_p2_Log_Emp.png">圖</a></td></tr>
+    </table>
+  </div>
+</details>
+    <details class="detail-block">
+  <summary>展開完整 VIF 共線性檢查表：Model 3 全部 X 變數</summary>
+  <div class="detail-help">讀法：VIF 衡量 X 變數彼此是否太像。一般 VIF &gt; 5 要注意，VIF &gt; 10 代表共線性偏高。這就是為什麼 Model 3 只作補充檢查，不作主要論點。</div>
+  <div class="table-scroll">
+    <table class="col-table coef-table">
+      <tr><th>Outcome</th><th>Model</th><th>Variable</th><th>VIF</th><th>N</th><th>Industry Base</th><th>Dropped</th><th>Flag</th></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Size</code></td><td>61.3068</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>ROA</code></td><td>22.9613</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Leverage</code></td><td>3.6957</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Cash</code></td><td>10.2323</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>CAPEX</code></td><td>10.0537</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>PPE</code></td><td>14.5137</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>RD</code></td><td>7.1622</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 5</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>MTB</code></td><td>2.4214</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>CFO</code></td><td>21.2410</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Goodwill</code></td><td>25.2114</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Intangible</code></td><td>37.4059</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Current_Ratio</code></td><td>9.6902</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 5</td></tr>
+      <tr class="risk-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>Log_Emp</code></td><td>72.0305</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_28</code></td><td>7.9936</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 5</td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_35</code></td><td>5.8915</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 5</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_37</code></td><td>2.9591</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_38</code></td><td>2.0664</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_39</code></td><td>2.1835</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_48</code></td><td>2.0141</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_53</code></td><td>3.7357</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class="caution-row"><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_59</code></td><td>7.0141</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 5</td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_67</code></td><td>4.7204</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_73</code></td><td>3.5319</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_78</code></td><td>2.5856</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class=""><td><code>CAR_m1_p1</code></td><td>Model 3</td><td><code>sic2_87</code></td><td>2.5536</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class="risk-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Size</code></td><td>61.3068</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="risk-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>ROA</code></td><td>22.9613</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Leverage</code></td><td>3.6957</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class="risk-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Cash</code></td><td>10.2323</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="risk-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>CAPEX</code></td><td>10.0537</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="risk-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>PPE</code></td><td>14.5137</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="caution-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>RD</code></td><td>7.1622</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 5</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>MTB</code></td><td>2.4214</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class="risk-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>CFO</code></td><td>21.2410</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="risk-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Goodwill</code></td><td>25.2114</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="risk-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Intangible</code></td><td>37.4059</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="caution-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Current_Ratio</code></td><td>9.6902</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 5</td></tr>
+      <tr class="risk-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>Log_Emp</code></td><td>72.0305</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 10</td></tr>
+      <tr class="caution-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_28</code></td><td>7.9936</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 5</td></tr>
+      <tr class="caution-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_35</code></td><td>5.8915</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 5</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_37</code></td><td>2.9591</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_38</code></td><td>2.0664</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_39</code></td><td>2.1835</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_48</code></td><td>2.0141</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_53</code></td><td>3.7357</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class="caution-row"><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_59</code></td><td>7.0141</td><td>59</td><td>36</td><td>RD_dummy</td><td>VIF &gt; 5</td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_67</code></td><td>4.7204</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_73</code></td><td>3.5319</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_78</code></td><td>2.5856</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+      <tr class=""><td><code>CAR_m2_p2</code></td><td>Model 3</td><td><code>sic2_87</code></td><td>2.5536</td><td>59</td><td>36</td><td>RD_dummy</td><td></td></tr>
+    </table>
+  </div>
+</details>
+  </div>
+
+</div>
+
+<!-- ===== TAB 4: REGRESSION RESULTS REPORT ===== -->
+<div class="panel" id="panel-results">
+
+  <div class="model-box">
+    <h3 style="font-size:15px; font-weight:700; margin-bottom:10px; color:#8b5cf6">研究結果總覽</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:10px">
+      本分頁整理已完成的多元 OLS 回歸、單變數 OLS 回歸、圖表與統計概念說明。資料來源為 <code>0515_final_compustat_firm.xlsx</code> 的 <code>prior_fyear_only (2)</code> sheet。原始資料共有 71 筆公司/事件觀察值，其中 <code>CAR_m1_p1</code> 與 <code>CAR_m2_p2</code> 各有 67 筆有效值。
+    </p>
+    <p style="font-size:13px; color:var(--text)">
+      結果解讀上，多元回歸 Model 1 與 Model 2 是主要模型；Model 3 加入更多控制變數後樣本數下降且共線性較高，因此作為補充檢查。單變數回歸則用於展示每個變數和 CAR 的原始簡單關係，不能取代多元回歸。
+    </p>
+  </div>
+
+  <div class="result-grid">
+    <div class="result-card"><div class="label">清理後總資料</div><div class="value">71</div></div>
+    <div class="result-card"><div class="label">CAR 有效樣本</div><div class="value">67</div></div>
+    <div class="result-card"><div class="label">多元回歸模型</div><div class="value">6</div></div>
+    <div class="result-card"><div class="label">單變數回歸模型</div><div class="value">32</div></div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">A. 統計概念說明</h3>
+    <table class="col-table">
+      <tr><th>概念</th><th>在本研究中的意思</th><th>如何解讀</th></tr>
+      <tr><td><code>Y</code> 被解釋變數</td><td>本研究的 Y 是 <code>CAR_m1_p1</code> 與 <code>CAR_m2_p2</code></td><td>CAR 代表事件附近的市場反應；回歸是在解釋哪些公司特徵和 CAR 有關。</td></tr>
+      <tr><td><code>X</code> 解釋變數</td><td><code>Size</code>、<code>ROA</code>、<code>CAPEX</code>、<code>RD</code> 等公司特徵</td><td>X 是用來解釋 Y 的因素。多元回歸會同時放多個 X。</td></tr>
+      <tr><td>係數 <code>coef</code></td><td>每個 X 對 CAR 的估計關係</td><td>正值表示 X 越高，CAR 平均越高；負值表示 X 越高，CAR 平均越低。在多元回歸中，意思是「控制其他變數後」的關係。</td></tr>
+      <tr><td>標準誤 <code>std_err</code></td><td>係數估計的不確定程度</td><td>標準誤越大，表示係數越不穩。小樣本或共線性高時，標準誤常會變大。</td></tr>
+      <tr><td><code>t</code> 值</td><td>係數相對於標準誤的大小</td><td>絕對值越大，代表統計訊號越強。熱力圖就是用 t 值呈現訊號強弱。</td></tr>
+      <tr><td><code>p_value</code> 與星號</td><td>判斷結果是否可能只是隨機出現</td><td><code>*</code> 表 p&lt;0.10，<code>**</code> 表 p&lt;0.05，<code>***</code> 表 p&lt;0.01。星號越多，統計證據越強。</td></tr>
+      <tr><td><code>R²</code></td><td>模型解釋 CAR 變動的比例</td><td>例如 R²=0.47，表示模型約解釋 47% 的 CAR 變動。但 R² 會因為多加變數而上升。</td></tr>
+      <tr><td><code>Adjusted R²</code></td><td>修正後的 R²</td><td>會懲罰過多變數。小樣本中比 R² 更適合用來比較模型是否真的有改善。</td></tr>
+      <tr><td>產業固定效果 <code>Industry FE</code></td><td>用 SIC 前兩碼控制產業差異</td><td>不同產業本來就不同，加入 FE 是為了先扣掉產業平均差異，再比較公司特徵和 CAR 的關係。</td></tr>
+      <tr><td><code>VIF</code></td><td>檢查 X 變數彼此是否太像</td><td>VIF&gt;5 需要注意，VIF&gt;10 通常代表共線性偏高。Model 3 的 VIF 高，所以不作為主模型。</td></tr>
+      <tr><td>單變數回歸</td><td>一次只放一個 X</td><td>適合畫散點圖與趨勢線，但沒有控制其他因素，因此只能作探索性分析。</td></tr>
+      <tr><td>多元回歸</td><td>一次放多個 X</td><td>正式主模型。可以在控制其他公司特徵後，看單一變數與 CAR 的關係。</td></tr>
+    </table>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">B. 多元回歸模型摘要</h3>
+    <table class="col-table">
+      <tr><th>Y 變數</th><th>模型</th><th>N</th><th>R²</th><th>Adjusted R²</th><th>產業 FE</th><th>模型定位</th></tr>
+      <tr><td><code>CAR_m1_p1</code></td><td>Model 1</td><td>67</td><td>0.472</td><td>0.399</td><td>無</td><td>主模型，核心控制變數</td></tr>
+      <tr><td><code>CAR_m1_p1</code></td><td>Model 2</td><td>67</td><td>0.599</td><td>0.411</td><td>有</td><td>主模型，控制產業差異</td></tr>
+      <tr><td><code>CAR_m1_p1</code></td><td>Model 3</td><td>59</td><td>0.492</td><td>0.107</td><td>有</td><td>補充檢查，VIF 較高</td></tr>
+      <tr><td><code>CAR_m2_p2</code></td><td>Model 1</td><td>67</td><td>0.475</td><td>0.402</td><td>無</td><td>主模型，核心控制變數</td></tr>
+      <tr><td><code>CAR_m2_p2</code></td><td>Model 2</td><td>67</td><td>0.551</td><td>0.341</td><td>有</td><td>主模型，控制產業差異</td></tr>
+      <tr><td><code>CAR_m2_p2</code></td><td>Model 3</td><td>59</td><td>0.611</td><td>0.316</td><td>有</td><td>補充檢查，VIF 較高</td></tr>
+    </table>
+    <div class="info"><strong>說明：</strong>Model 1/2 保留 67 筆 CAR 樣本，因此是主要分析依據。Model 3 加入 MTB、CFO、Goodwill、Intangible、Current_Ratio、Log_Emp 後樣本降為 59，且 VIF 偏高，因此不能過度解釋單一係數。</div>
+  </div>
+
+  <div class="figure-panel">
+    <h3 style="font-size:14px; font-weight:700;">C. 多元回歸變數影響強度熱力圖</h3>
+    <p style="font-size:12px; color:var(--muted); margin-top:4px">藍色代表正向係數，紅色代表負向係數，顏色越深代表 t 值越大。這張圖用來快速比較不同模型中哪些變數的統計訊號較強。</p>
+    <img src="../figures/regression/variable_impact_heatmap.png" alt="Variable Impact Heatmap">
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">D. 多元回歸主要係數：CAR_m1_p1</h3>
+    <table class="col-table coef-table">
+      <tr><th>變數</th><th>Model 1</th><th>Model 2</th><th>Model 3</th></tr>
+      <tr><td><code>Size</code></td><td>-0.0019<br><span style='color:var(--muted)'>(0.0038)</span></td><td>-0.0092*<br><span style='color:var(--muted)'>(0.0050)</span></td><td>-0.0026<br><span style='color:var(--muted)'>(0.0125)</span></td></tr>
+<tr><td><code>ROA</code></td><td>0.0665<br><span style='color:var(--muted)'>(0.0447)</span></td><td>0.1289**<br><span style='color:var(--muted)'>(0.0574)</span></td><td>0.0139<br><span style='color:var(--muted)'>(0.0953)</span></td></tr>
+<tr><td><code>Leverage</code></td><td>-0.0313<br><span style='color:var(--muted)'>(0.0327)</span></td><td>-0.0225<br><span style='color:var(--muted)'>(0.0417)</span></td><td>0.0505<br><span style='color:var(--muted)'>(0.0445)</span></td></tr>
+<tr><td><code>Cash</code></td><td>0.0204<br><span style='color:var(--muted)'>(0.0403)</span></td><td>0.0216<br><span style='color:var(--muted)'>(0.0460)</span></td><td>0.0013<br><span style='color:var(--muted)'>(0.0586)</span></td></tr>
+<tr><td><code>CAPEX</code></td><td>0.5897*<br><span style='color:var(--muted)'>(0.3196)</span></td><td>0.8490**<br><span style='color:var(--muted)'>(0.3968)</span></td><td>-0.1305<br><span style='color:var(--muted)'>(0.3067)</span></td></tr>
+<tr><td><code>PPE</code></td><td>-0.1195*<br><span style='color:var(--muted)'>(0.0690)</span></td><td>-0.1368<br><span style='color:var(--muted)'>(0.0835)</span></td><td>0.1535*<br><span style='color:var(--muted)'>(0.0850)</span></td></tr>
+<tr><td><code>RD</code></td><td>-0.2301**<br><span style='color:var(--muted)'>(0.1058)</span></td><td>-0.2717*<br><span style='color:var(--muted)'>(0.1360)</span></td><td>-0.0158<br><span style='color:var(--muted)'>(0.1172)</span></td></tr>
+<tr><td><code>RD_dummy</code></td><td>-0.0071<br><span style='color:var(--muted)'>(0.0504)</span></td><td>0.0216<br><span style='color:var(--muted)'>(0.0596)</span></td><td>not used</td></tr>
+<tr><td><code>MTB</code></td><td>not used</td><td>not used</td><td>0.0008<br><span style='color:var(--muted)'>(0.0010)</span></td></tr>
+<tr><td><code>CFO</code></td><td>not used</td><td>not used</td><td>-0.0396<br><span style='color:var(--muted)'>(0.1120)</span></td></tr>
+<tr><td><code>Goodwill</code></td><td>not used</td><td>not used</td><td>-0.2993**<br><span style='color:var(--muted)'>(0.1453)</span></td></tr>
+<tr><td><code>Intangible</code></td><td>not used</td><td>not used</td><td>0.2379**<br><span style='color:var(--muted)'>(0.1146)</span></td></tr>
+<tr><td><code>Current_Ratio</code></td><td>not used</td><td>not used</td><td>0.0104<br><span style='color:var(--muted)'>(0.0066)</span></td></tr>
+<tr><td><code>Log_Emp</code></td><td>not used</td><td>not used</td><td>0.0095<br><span style='color:var(--muted)'>(0.0148)</span></td></tr>
+    </table>
+    <div class="note"><strong>分析結論：</strong><code>CAR_m1_p1</code> 中，Model 1/2 較穩定的訊號是 <span class="good">ROA 正向</span>、<span class="good">CAPEX 正向</span>、<span class="bad">RD 負向</span>。加入產業固定效果後，ROA 與 CAPEX 仍呈正向且達 5% 顯著，RD 維持負向且接近顯著。</div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">E. 多元回歸主要係數：CAR_m2_p2</h3>
+    <table class="col-table coef-table">
+      <tr><th>變數</th><th>Model 1</th><th>Model 2</th><th>Model 3</th></tr>
+      <tr><td><code>Size</code></td><td>-0.0040<br><span style='color:var(--muted)'>(0.0055)</span></td><td>-0.0105<br><span style='color:var(--muted)'>(0.0078)</span></td><td>0.0263<br><span style='color:var(--muted)'>(0.0175)</span></td></tr>
+<tr><td><code>ROA</code></td><td>0.1223*<br><span style='color:var(--muted)'>(0.0652)</span></td><td>0.2031**<br><span style='color:var(--muted)'>(0.0888)</span></td><td>-0.1946<br><span style='color:var(--muted)'>(0.1339)</span></td></tr>
+<tr><td><code>Leverage</code></td><td>-0.0291<br><span style='color:var(--muted)'>(0.0477)</span></td><td>-0.0193<br><span style='color:var(--muted)'>(0.0646)</span></td><td>0.0547<br><span style='color:var(--muted)'>(0.0625)</span></td></tr>
+<tr><td><code>Cash</code></td><td>-0.0037<br><span style='color:var(--muted)'>(0.0588)</span></td><td>0.0335<br><span style='color:var(--muted)'>(0.0712)</span></td><td>-0.0215<br><span style='color:var(--muted)'>(0.0823)</span></td></tr>
+<tr><td><code>CAPEX</code></td><td>0.9021*<br><span style='color:var(--muted)'>(0.4663)</span></td><td>0.9932<br><span style='color:var(--muted)'>(0.6145)</span></td><td>-0.5080<br><span style='color:var(--muted)'>(0.4311)</span></td></tr>
+<tr><td><code>PPE</code></td><td>-0.1752*<br><span style='color:var(--muted)'>(0.1007)</span></td><td>-0.1460<br><span style='color:var(--muted)'>(0.1293)</span></td><td>0.1651<br><span style='color:var(--muted)'>(0.1195)</span></td></tr>
+<tr><td><code>RD</code></td><td>-0.2649*<br><span style='color:var(--muted)'>(0.1544)</span></td><td>-0.2718<br><span style='color:var(--muted)'>(0.2106)</span></td><td>0.0217<br><span style='color:var(--muted)'>(0.1647)</span></td></tr>
+<tr><td><code>RD_dummy</code></td><td>0.0226<br><span style='color:var(--muted)'>(0.0735)</span></td><td>0.0626<br><span style='color:var(--muted)'>(0.0922)</span></td><td>not used</td></tr>
+<tr><td><code>MTB</code></td><td>not used</td><td>not used</td><td>-0.0001<br><span style='color:var(--muted)'>(0.0014)</span></td></tr>
+<tr><td><code>CFO</code></td><td>not used</td><td>not used</td><td>0.1696<br><span style='color:var(--muted)'>(0.1575)</span></td></tr>
+<tr><td><code>Goodwill</code></td><td>not used</td><td>not used</td><td>-0.0541<br><span style='color:var(--muted)'>(0.2042)</span></td></tr>
+<tr><td><code>Intangible</code></td><td>not used</td><td>not used</td><td>0.0066<br><span style='color:var(--muted)'>(0.1610)</span></td></tr>
+<tr><td><code>Current_Ratio</code></td><td>not used</td><td>not used</td><td>-0.0005<br><span style='color:var(--muted)'>(0.0092)</span></td></tr>
+<tr><td><code>Log_Emp</code></td><td>not used</td><td>not used</td><td>-0.0291<br><span style='color:var(--muted)'>(0.0208)</span></td></tr>
+    </table>
+    <div class="note"><strong>分析結論：</strong><code>CAR_m2_p2</code> 中，最穩定的是 <span class="good">ROA 正向</span>。CAPEX、PPE、RD 在 Model 1 有弱顯著，但加入產業固定效果後顯著性下降，表示這些變數可能部分反映產業差異。</div>
+  </div>
+
+  <div class="figure-panel">
+    <h3 style="font-size:14px; font-weight:700;">F. 多元回歸係數圖</h3>
+    <p style="font-size:12px; color:var(--muted); margin-top:4px">係數圖顯示 coefficient 與 95% 信賴區間。如果信賴區間跨過 0，表示該變數在 5% 水準下不顯著。這兩張圖適合報告，因為它們直接回答「哪些變數方向比較明顯」。</p>
+    <img src="../figures/regression/coefficient_plot_CAR_m1_p1.png" alt="Coefficient Plot CAR_m1_p1">
+    <img src="../figures/regression/coefficient_plot_CAR_m2_p2.png" alt="Coefficient Plot CAR_m2_p2">
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">G. Model 3 的 VIF 共線性檢查</h3>
+    <table class="col-table">
+      <tr><th>高 VIF 變數</th><th>VIF</th><th>解讀</th></tr>
+      <tr><td><code>Log_Emp</code></td><td>72.03</td><td>和公司規模高度重疊</td></tr>
+      <tr><td><code>Size</code></td><td>61.31</td><td>和員工數、資產結構等變數高度相關</td></tr>
+      <tr><td><code>Intangible</code></td><td>37.41</td><td>和 Goodwill、產業特性可能重疊</td></tr>
+      <tr><td><code>Goodwill</code></td><td>25.21</td><td>和無形資產、併購相關特徵重疊</td></tr>
+      <tr><td><code>ROA</code></td><td>22.96</td><td>和 CFO、資產結構變數重疊</td></tr>
+      <tr><td><code>CFO</code></td><td>21.24</td><td>和 ROA 同時衡量公司營運表現</td></tr>
+    </table>
+    <img src="../figures/regression/vif_model3.png" alt="Model 3 VIF" style="width:100%; border:1px solid var(--border); border-radius:6px; background:#fff; margin-top:12px;">
+    <div class="note"><strong>分析結論：</strong>Model 3 的多個變數彼此高度相關，因此它可以作為補充檢查，但不適合用來強調單一變數的精準效果。</div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">H. 單變數回歸結果</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:10px">
+      單變數回歸形式為 <code>CAR = β₀ + β₁X + ε</code>，一次只檢查一個 X。這種方法適合讓讀者直觀看到每個變數和 CAR 的原始關係，但沒有控制其他變數，因此可能受到產業、規模、獲利能力等因素干擾。
+    </p>
+    <table class="col-table">
+      <tr><th>Outcome</th><th>Variable</th><th>N</th><th>Coef</th><th>t</th><th>p-value</th><th>R²</th><th>Interpretation</th></tr>
+      <tr><td><code>CAR_m2_p2</code></td><td><code>ROA</code></td><td>67</td><td>0.2110***</td><td>6.79</td><td>0.0000000040</td><td>0.415</td><td>positive; statistically significant at 5%</td></tr>
+<tr><td><code>CAR_m1_p1</code></td><td><code>ROA</code></td><td>67</td><td>0.1402***</td><td>6.49</td><td>0.0000000138</td><td>0.393</td><td>positive; statistically significant at 5%</td></tr>
+<tr><td><code>CAR_m2_p2</code></td><td><code>RD</code></td><td>67</td><td>-0.4928***</td><td>-5.70</td><td>0.0000003194</td><td>0.333</td><td>negative; statistically significant at 5%</td></tr>
+<tr><td><code>CAR_m1_p1</code></td><td><code>RD</code></td><td>67</td><td>-0.3365***</td><td>-5.69</td><td>0.0000003224</td><td>0.333</td><td>negative; statistically significant at 5%</td></tr>
+<tr><td><code>CAR_m2_p2</code></td><td><code>CFO</code></td><td>67</td><td>0.2506***</td><td>5.56</td><td>0.0000005482</td><td>0.322</td><td>positive; statistically significant at 5%</td></tr>
+<tr><td><code>CAR_m1_p1</code></td><td><code>CFO</code></td><td>67</td><td>0.1682***</td><td>5.42</td><td>0.0000009429</td><td>0.311</td><td>positive; statistically significant at 5%</td></tr>
+<tr><td><code>CAR_m2_p2</code></td><td><code>Size</code></td><td>67</td><td>0.0126***</td><td>3.26</td><td>0.001788</td><td>0.140</td><td>positive; statistically significant at 5%</td></tr>
+<tr><td><code>CAR_m1_p1</code></td><td><code>Size</code></td><td>67</td><td>0.0082***</td><td>3.08</td><td>0.003051</td><td>0.127</td><td>positive; statistically significant at 5%</td></tr>
+<tr><td><code>CAR_m2_p2</code></td><td><code>Cash</code></td><td>67</td><td>-0.1111**</td><td>-2.21</td><td>0.03087</td><td>0.070</td><td>negative; statistically significant at 5%</td></tr>
+<tr><td><code>CAR_m2_p2</code></td><td><code>Intangible</code></td><td>65</td><td>0.1050**</td><td>2.13</td><td>0.03706</td><td>0.067</td><td>positive; statistically significant at 5%</td></tr>
+<tr><td><code>CAR_m1_p1</code></td><td><code>SGA</code></td><td>60</td><td>-0.0426*</td><td>-1.90</td><td>0.06256</td><td>0.059</td><td>negative; weakly significant at 10%</td></tr>
+<tr><td><code>CAR_m2_p2</code></td><td><code>Goodwill</code></td><td>64</td><td>0.1461*</td><td>1.85</td><td>0.06845</td><td>0.053</td><td>positive; weakly significant at 10%</td></tr>
+<tr><td><code>CAR_m2_p2</code></td><td><code>Log_Emp</code></td><td>67</td><td>0.0084*</td><td>1.79</td><td>0.07844</td><td>0.047</td><td>positive; weakly significant at 10%</td></tr>
+<tr><td><code>CAR_m1_p1</code></td><td><code>Intangible</code></td><td>65</td><td>0.0594*</td><td>1.75</td><td>0.08517</td><td>0.046</td><td>positive; weakly significant at 10%</td></tr>
+    </table>
+    <div class="info"><strong>單變數結果重點：</strong>ROA、RD、CFO、Size 在單變數回歸中訊號較強；但單變數結果和多元回歸可能不同。例如 Size 在單變數中呈正向，但在多元 Model 2 中對 <code>CAR_m1_p1</code> 呈負向，這表示 Size 的簡單關係可能混入了 ROA、RD、產業等其他因素。因此正式結論仍以多元回歸為主。</div>
+  </div>
+
+  <div class="figure-panel">
+    <h3 style="font-size:14px; font-weight:700;">I. 單變數回歸圖表</h3>
+    <p style="font-size:12px; color:var(--muted); margin-top:4px">下方熱力圖總結所有 32 個單變數模型。完整散點圖與趨勢線可打開 <code>univariate_figures_index.html</code> 查看。</p>
+    <img src="../figures/univariate/univariate_heatmap.png" alt="Univariate Regression Heatmap">
+    <div class="info"><strong>完整圖表檔：</strong><code>univariate_regression_results.csv</code> 是單變數回歸總表；<code>univariate_figures_index.html</code> 包含 32 張散點圖與趨勢線。</div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">J. 綜合分析結論</h3>
+    <table class="col-table">
+      <tr><th>結論</th><th>依據</th><th>解釋限制</th></tr>
+      <tr><td><span class="good">ROA 較穩定呈正向</span></td><td>在兩個 CAR 的 Model 2 中皆為正向且 5% 顯著</td><td>代表獲利能力較好的公司，事件附近市場反應較佳；仍屬相關性，不直接等於因果。</td></tr>
+      <tr><td><span class="good">CAPEX 在主模型中偏正向</span></td><td><code>CAR_m1_p1</code> Model 1/2 顯著為正；<code>CAR_m2_p2</code> Model 1 弱顯著</td><td>加入更多控制後穩定性下降，因此應作為主模型中的觀察結果。</td></tr>
+      <tr><td><span class="bad">RD 在主模型中偏負向</span></td><td>Model 1/2 中多呈負向，尤其 <code>CAR_m1_p1</code> 較明顯</td><td>可能表示高研發公司對事件更敏感，但原因需要結合研究背景解釋。</td></tr>
+      <tr><td>Model 3 僅作補充</td><td>樣本數降為 59，且 VIF 偏高</td><td>不建議以 Model 3 的單一係數作為主要論點。</td></tr>
+      <tr><td>單變數回歸作為探索</td><td>已產出 32 組單變數 OLS 與散點圖</td><td>沒有控制其他因素，因此不能取代 Model 1/2。</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<!-- ===== TAB 5: METHOD AUDIT ===== -->
+<div class="panel" id="panel-methodaudit">
+
+  <div class="model-box">
+    <h3 style="font-size:16px; font-weight:700; margin-bottom:10px">資料處理與 Model 1/2/3 方法追蹤表</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:10px">
+      這一頁把整個回歸流程拆開：從哪份原始檔開始、做了哪些清理與變數轉換、產出哪些 CSV 和圖檔、最後每個模型應該怎麼解讀。目標是讓不熟統計的人也能追得上每一步，而不是只看到最後的 coefficient。
+    </p>
+    <div class="info">
+      <strong>最短版流程：</strong><code>0515_final_compustat_firm.xlsx</code> → 計算財務控制變數 → 產出 <code>compustat_controls_clean.csv</code> 和 <code>regression_data.csv</code> → 跑 Model 1/2/3 OLS → 產出 <code>regression_results.csv</code>、<code>vif_results.csv</code>、圖表與 HTML 報告。
+    </div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">A. 使用的檔案與產出的檔案</h3>
+    <table class="col-table">
+      <tr><th>階段</th><th>檔案</th><th>用途</th><th>本次結果</th></tr>
+      <tr><td>原始輸入</td><td><code>01_working_data/0515_final_compustat_firm.xlsx</code><br><code>sheet = prior_fyear_only (2)</code></td><td>Compustat 公司資料 + 事件 CAR 欄位</td><td>原始 71 筆公司/事件觀察值，519 個欄位。</td></tr>
+      <tr><td>執行程式</td><td><code>03_scripts/run_compustat_regressions.py</code></td><td>計算控制變數、winsorize、建立 SIC2、跑 OLS、做 VIF</td><td>所有正式 regression CSV 都由這支程式產出。</td></tr>
+      <tr><td>清理後控制變數</td><td><code>01_data_outputs/compustat_controls_clean.csv</code></td><td>保留 ID、CAR、計算後的財務 X、<code>sic_2digit</code></td><td>用來檢查每家公司處理後的變數值。</td></tr>
+      <tr><td>回歸用資料</td><td><code>01_data_outputs/regression_data.csv</code></td><td>實際送進 Model 1/2/3 前的資料表</td><td>71 筆；兩個 CAR 各有 67 筆有效值。</td></tr>
+      <tr><td>描述統計</td><td><code>01_data_outputs/descriptive_stats.csv</code></td><td>每個變數的 N、mean、std、min、分位數、max</td><td>用來寫資料概況與樣本描述。</td></tr>
+      <tr><td>多元回歸結果</td><td><code>01_data_outputs/regression_results.csv</code></td><td>Model 1/2/3 的係數、標準誤、t 值、p-value、R²、Adj. R²</td><td>正式解讀以 Model 1/2 為主，Model 3 為補充。</td></tr>
+      <tr><td>共線性檢查</td><td><code>01_data_outputs/vif_results.csv</code></td><td>檢查 Model 3 的 X 變數彼此是否太重疊</td><td>多個變數 VIF &gt; 10，所以 Model 3 不作主結論。</td></tr>
+      <tr><td>單變數回歸</td><td><code>01_data_outputs/univariate_regression_results.csv</code></td><td>一次只放一個 X 的簡單 OLS</td><td>共 32 組，用於探索與散點圖，不取代多元回歸。</td></tr>
+      <tr><td>圖表</td><td><code>figures/regression/</code><br><code>figures/univariate/</code></td><td>係數圖、模型適配圖、VIF 圖、單變數散點圖</td><td>HTML 報告中的圖片都引用這些檔案。</td></tr>
+    </table>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">B. 共同資料處理步驟：三個模型都先經過這些處理</h3>
+    <table class="col-table">
+      <tr><th>步驟</th><th>具體處理</th><th>白話解釋</th></tr>
+      <tr><td>1</td><td>檢查必要欄位：ID、<code>sic</code>、兩個 CAR、以及財務原始欄位 <code>at</code>、<code>ni</code>、<code>dltt</code>、<code>dlc</code> 等</td><td>先確認公式需要的原料都有，缺必要欄位就不能跑。</td></tr>
+      <tr><td>2</td><td>把財務欄位轉成 numeric；無法轉成數字的值設為 missing</td><td>避免文字或空白干擾計算。</td></tr>
+      <tr><td>3</td><td>所有比例型變數都用安全除法；分母為 0 時設為 missing</td><td>例如 <code>ni / at</code>，如果資產是 0，就不硬算。</td></tr>
+      <tr><td>4</td><td>計算核心 X：<code>Size</code>、<code>ROA</code>、<code>Leverage</code>、<code>Cash</code>、<code>CAPEX</code>、<code>PPE</code>、<code>RD</code>、<code>RD_dummy</code></td><td>這 8 個是 Model 1/2 的主體。</td></tr>
+      <tr><td>5</td><td>計算補充 X：<code>MTB</code>、<code>SGA</code>、<code>CFO</code>、<code>Goodwill</code>、<code>Intangible</code>、<code>Current_Ratio</code>、<code>Payout</code>、<code>Log_Emp</code></td><td>其中部分放進 Model 3，其他用於描述統計和單變數分析。</td></tr>
+      <tr><td>6</td><td><code>xrd</code> missing 先補 0 來算 <code>RD</code>，並建立 <code>RD_dummy = 1 if xrd 原本有值 else 0</code></td><td>保留樣本，同時告訴模型哪些公司原本有揭露研發資料。</td></tr>
+      <tr><td>7</td><td>所有非 dummy 財務變數做 1% 到 99% winsorize；<code>RD_dummy</code> 不 winsorize</td><td>把極端值壓到合理範圍，避免小樣本被少數極端值帶著跑。</td></tr>
+      <tr><td>8</td><td>用 <code>sic</code> 前兩碼建立 <code>sic_2digit</code>，例如 <code>3674 → 36</code></td><td>用較粗的產業大類控制產業差異，避免 4-digit SIC 太細導致樣本太少。</td></tr>
+      <tr><td>9</td><td>每個模型各自根據需要的 Y 和 X 做 <code>dropna</code></td><td>Model 1/2 需要的變數少，所以保留 67 筆；Model 3 變數多，所以降到 59 筆。</td></tr>
+    </table>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">B-1. Winsorize 極端值處理：怎麼做、為什麼做</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:10px">
+      <strong>什麼是 winsorize？</strong>把極端值「壓」到某個分位數的門檻，而不是刪掉。例如 1%-99% winsorize 的意思是：小於第 1 百分位的值都改成第 1 百分位的值，大於第 99 百分位的值都改成第 99 百分位的值。這樣可以保留樣本數，同時避免少數極端值把回歸結果帶偏。
+    </p>
+    <table class="col-table">
+      <tr><th>項目</th><th>本次做法</th><th>白話解釋</th></tr>
+      <tr><td>處理範圍</td><td>1% 到 99% winsorize</td><td>把最極端的頭尾各 1% 的值壓到門檻值。以 67 筆來說，大約是把最極端的 1 筆壓到第 2 筆的值。</td></tr>
+      <tr><td>適用變數</td><td>所有非 dummy 的財務變數：<code>Size</code>、<code>ROA</code>、<code>Leverage</code>、<code>Cash</code>、<code>CAPEX</code>、<code>PPE</code>、<code>RD</code>、<code>MTB</code>、<code>CFO</code>、<code>Goodwill</code>、<code>Intangible</code>、<code>Current_Ratio</code>、<code>Log_Emp</code>、<code>SGA</code>、<code>Payout</code></td><td>這些都是連續型數值，需要處理極端值。</td></tr>
+      <tr><td>不做 winsorize</td><td><code>RD_dummy</code>、<code>sic2_*</code> 產業 dummy</td><td>dummy 只有 0 和 1，沒有極端值問題，也不能 winsorize。</td></tr>
+      <tr><td>CAR 是否 winsorize</td><td>不做</td><td>CAR 是依變數（Y），是你要解釋的目標，不應該事前「壓」過；而且 CAR 本身分布不會像財務比率那樣容易有極端值。</td></tr>
+      <tr><td>執行時機</td><td>在計算完指標、準備跑回歸之前</td><td>先算完 ROA、Leverage 等，再把極端值壓到門檻。</td></tr>
+    </table>
+    <div class="note">
+      <strong>為什麼選 1%-99%？</strong>這是實證財務研究中最常見的做法，平衡了「保守處理極端值」和「不過度改變資料分布」。有些論文用 5%-95%，會比較激進；有些用 0.5%-99.5%，會比較保守。你的樣本只有 71 筆，用 1%-99% 是合理選擇。
+    </div>
+    <div class="info">
+      <strong>和刪除極端值的差別：</strong>如果改用「刪除極端值」（trimming），你會直接丟掉那些觀察值，樣本數會減少。Winsorize 則是把極端值「拉回來」但不刪除，所以 N 不變。小樣本情況下，保留 N 比較重要。
+    </div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">B-2. 為什麼只有 Model 3 需要檢查共線性（VIF）？</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:10px">
+      <strong>什麼是共線性？</strong>當多個 X 變數彼此高度相關時，OLS 回歸無法清楚區分每個 X 對 Y 的獨立影響，結果是係數變得不穩定、標準誤變大、p-value 變高、甚至方向可能反轉。VIF（Variance Inflation Factor）是衡量這個問題的指標：VIF > 5 需要注意，VIF > 10 通常代表共線性偏高。
+    </p>
+    <table class="col-table">
+      <tr><th>模型</th><th>X 變數數量</th><th>共線性風險</th><th>是否需要 VIF 檢查</th><th>原因</th></tr>
+      <tr><td><strong>Model 1</strong></td><td>8 個核心 X</td><td><span class="good">低</span></td><td>不需要</td><td>變數數量少，且設計時刻意選擇「意義不重疊」的指標（例如 ROA 管獲利，Leverage 管負債，Cash 管流動性）。這 8 個變數彼此的相關性較低。</td></tr>
+      <tr><td><strong>Model 2</strong></td><td>8 個核心 X + 產業 dummy</td><td><span class="good">低</span></td><td>不需要</td><td>產業 dummy 是類別標籤，和財務數值本身不會有數學上的共線性問題。只是會吃掉自由度，但不會造成 VIF 爆高。</td></tr>
+      <tr><td><strong>Model 3</strong></td><td>14 個 X + 產業 dummy</td><td><span class="bad">高</span></td><td><strong>需要</strong></td><td>補充控制變數（MTB、CFO、Goodwill、Intangible、Log_Emp）很多都跟原本的核心 X 有重疊：<br>
+        ① <code>Log_Emp</code> 和 <code>Size</code> 都在量公司規模，所以高度相關<br>
+        ② <code>CFO</code> 和 <code>ROA</code> 都跟獲利有關<br>
+        ③ <code>Goodwill</code>、<code>Intangible</code> 和 <code>PPE</code> 都是資產組成<br>
+        ④ <code>MTB</code> 和 <code>Size</code>、<code>ROA</code> 都可能相關<br>
+        變數太多、彼此重疊，VIF 就會飆高。</td></tr>
+    </table>
+    <div class="note">
+      <strong>Model 3 的實際 VIF 結果：</strong>
+      <br>• <code>Log_Emp</code> VIF = 72.03 — 和 Size 高度重疊
+      <br>• <code>Size</code> VIF = 61.31 — 和 Log_Emp 高度重疊
+      <br>• <code>Intangible</code> VIF = 37.41 — 和 Goodwill、PPE 重疊
+      <br>• <code>Goodwill</code> VIF = 25.21 — 和 Intangible 重疊
+      <br>• <code>ROA</code> VIF = 22.96 — 和 CFO 重疊
+      <br>• <code>CFO</code> VIF = 21.24 — 和 ROA 重疊
+      <br>這就是為什麼 Model 3 不能作為主要結論依據。
+    </div>
+    <div class="info">
+      <strong>所以結論是：</strong>Model 1/2 設計得比較乾淨，X 變數彼此不太重疊，不需要特別跑 VIF 檢查。Model 3 加入太多「意義重疊」的控制變數，所以必須跑 VIF 來確認共線性有多嚴重——結果發現很嚴重，因此 Model 3 只能當補充檢查，不能當主要故事。
+    </div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">B-3. 統計名詞白話解釋：df_resid、full-rank、R² vs Adjusted R²</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:14px">
+      這一段用最簡單的比喻解釋回歸報表裡常見的統計名詞。不需要會算，只需要知道它在說什麼、什麼時候該擔心。
+    </p>
+
+    <!-- 自由度 -->
+    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:14px 16px; margin-bottom:14px;">
+      <div style="font-weight:700; font-size:14px; color:#15803d; margin-bottom:8px">📐 自由度（Degrees of Freedom）與 df_resid</div>
+      <p style="font-size:13px; color:var(--text); margin-bottom:10px">
+        <strong>比喻：</strong>想像你有 10 塊積木（樣本數 N = 10），你要用這些積木來「解釋」某件事。每放一個 X 變數進回歸，就像是「花掉」一塊積木去學那個變數的影響。
+      </p>
+      <table class="col-table">
+        <tr><th>名詞</th><th>公式</th><th>白話意思</th></tr>
+        <tr><td><strong>N</strong></td><td>你的樣本數</td><td>你手上有幾筆資料。本研究 Model 1/2 是 67 筆，Model 3 是 59 筆。</td></tr>
+        <tr><td><strong>k</strong></td><td>你放進去的 X 變數數量（含截距項）</td><td>Model 1 放 8 個 X + 1 個截距 = 9 個參數；Model 2 再加產業 dummy，參數更多。</td></tr>
+        <tr><td><strong>df_resid</strong><br>（殘差自由度）</td><td><code>N - k</code></td><td>「花掉」k 塊積木後，你還剩幾塊積木可以用來評估誤差。<br>Model 2 的 df_resid = 67 - 22 = 45；Model 3 的 df_resid = 59 - 23 = 36。</td></tr>
+      </table>
+      <div class="note" style="margin-top:10px">
+        <strong>為什麼 df_resid 很重要？</strong><br>
+        • 如果 df_resid 太小（例如小於 30），你的統計推論會不穩定，p-value 和係數可能不可靠。<br>
+        • 如果 df_resid 接近 0 或變成負的，模型根本跑不出來——這叫做「自由度不足」。<br>
+        • <strong>本研究：</strong>Model 1 的 df_resid = 58（很夠），Model 2 = 45（夠用），Model 3 = 36（勉強夠，但要小心）。
+      </div>
+    </div>
+
+    <!-- Full-rank -->
+    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:14px 16px; margin-bottom:14px;">
+      <div style="font-weight:700; font-size:14px; color:#1d4ed8; margin-bottom:8px">🧮 Full-rank 檢查是什麼？</div>
+      <p style="font-size:13px; color:var(--text); margin-bottom:10px">
+        <strong>比喻：</strong>假設你要解一道數學題，有 3 個未知數（X₁、X₂、X₃），但你只有 2 條獨立的方程式——這樣解不出來，因為「資訊不夠」。Full-rank 檢查就是在確認：你的方程式（資料欄位）是不是「獨立的」、「資訊夠不夠」。
+      </p>
+      <table class="col-table">
+        <tr><th>情況</th><th>白話意思</th><th>程式怎麼處理</th></tr>
+        <tr><td>欄位完全重複</td><td>例如你同時放 <code>sic2_36</code> 和「其他所有 sic2 dummy 都是 0」——這兩件事在講同樣的資訊</td><td>自動丟掉一個（base category），只保留不重複的</td></tr>
+        <tr><td>欄位高度相關</td><td>例如 <code>RD_dummy</code> 在 Model 3 的 59 筆樣本中幾乎沒有變化（全是 1 或全是 0）</td><td>自動排除該欄位，避免矩陣運算壞掉</td></tr>
+        <tr><td>欄位可以被其他欄位「推算出來」</td><td>例如 A + B + C = 常數，那麼知道 A 和 B 就能算出 C</td><td>自動丟掉 C，因為它不提供新資訊</td></tr>
+      </table>
+      <div class="info" style="margin-top:10px">
+        <strong>本研究的 full-rank 排除：</strong><br>
+        • Model 2 排除了 <code>sic2_58</code>：這個產業在目前樣本中和其他欄位組合會造成矩陣問題，所以自動移除。<br>
+        • Model 3 排除了 <code>RD_dummy</code>：在 59 筆樣本中，這個 dummy 缺乏足夠變異。<br>
+        <strong>這不是資料壞掉，是數學上必要的處理，讓模型可以正常估計。</strong>
+      </div>
+    </div>
+
+    <!-- R² vs Adjusted R² -->
+    <div style="background:#fef3c7; border:1px solid #fcd34d; border-radius:8px; padding:14px 16px; margin-bottom:14px;">
+      <div style="font-weight:700; font-size:14px; color:#b45309; margin-bottom:8px">📊 R² 和 Adjusted R²：到底要看哪一個？</div>
+      <p style="font-size:13px; color:var(--text); margin-bottom:10px">
+        <strong>比喻：</strong>R² 就像考試分數，Adjusted R² 就像「扣掉作弊分數後的真實成績」。
+      </p>
+      <table class="col-table">
+        <tr><th>指標</th><th>白話意思</th><th>特性</th></tr>
+        <tr><td><strong>R²</strong><br>（R-squared）</td><td>模型解釋了多少比例的 Y 變異</td><td>
+          • 範圍 0 到 1，越高代表模型「看起來」解釋力越強<br>
+          • <span class="bad">問題：加越多 X 變數，R² 一定會上升</span>，就算那些變數沒意義也會上升<br>
+          • 所以 R² 可能是「假高分」——變數多就分數高
+        </td></tr>
+        <tr><td><strong>Adjusted R²</strong><br>（調整後 R²）</td><td>扣掉「變數數量的膨脹效果」後的解釋力</td><td>
+          • 會懲罰「放太多沒用的變數」<br>
+          • 如果加的變數沒有真的幫助解釋 Y，Adjusted R² 會下降<br>
+          • <span class="good">所以 Adjusted R² 是更誠實的指標</span>
+        </td></tr>
+      </table>
+      <div style="background:#fff; border:1px solid #fcd34d; border-radius:6px; padding:12px 14px; margin-top:10px;">
+        <strong style="color:#b45309">🎯 本研究應該看哪一個？答案：兩個都看，但判斷模型好壞主要看 Adjusted R²</strong>
+        <table class="col-table" style="margin-top:8px">
+          <tr><th>模型</th><th>R²</th><th>Adjusted R²</th><th>怎麼解讀</th></tr>
+          <tr><td>Model 1（CAR_m1_p1）</td><td>0.472</td><td>0.399</td><td>兩者差距不大（0.07），變數不多，沒有過度膨脹</td></tr>
+          <tr><td>Model 2（CAR_m1_p1）</td><td>0.599</td><td>0.411</td><td>R² 上升但 Adjusted R² 沒掉太多，產業控制有幫助</td></tr>
+          <tr><td>Model 3（CAR_m1_p1）</td><td>0.492</td><td><span class="bad">0.107</span></td><td><span class="bad">差距超大（0.38）</span>，代表多加的變數沒有真正幫助，只是在「灌水」</td></tr>
+        </table>
+      </div>
+      <div class="note" style="margin-top:10px">
+        <strong>Model 3 的 Adjusted R² 只有 0.107，是什麼意思？</strong><br>
+        它告訴你：雖然 R² 看起來有 0.49，但扣掉「變數太多」的膨脹後，模型真正的解釋力只剩下約 10%。這就是為什麼 Model 3 不能當主模型——它放了太多變數，但這些變數沒有真正提升解釋力，反而造成過度配適（overfitting）。
+      </div>
+    </div>
+
+    <!-- 哪裡可以找到這些數字 -->
+    <div style="background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; padding:14px 16px;">
+      <div style="font-weight:700; font-size:14px; color:#6d28d9; margin-bottom:8px">📍 這些數字在哪裡可以找到？</div>
+      <table class="col-table">
+        <tr><th>數字</th><th>在哪裡看</th><th>本研究的位置</th></tr>
+        <tr><td>N（樣本數）</td><td>回歸結果表的 <code>nobs</code> 或 <code>N</code> 欄</td><td><code>regression_results.csv</code> 的 <code>nobs</code> 欄；本頁 E 區的表格第 3 欄</td></tr>
+        <tr><td>df_resid</td><td>回歸結果表的 <code>df_resid</code> 欄</td><td><code>regression_results.csv</code>；本頁 E 區表格第 6 欄</td></tr>
+        <tr><td>R²</td><td>回歸結果表的 <code>r_squared</code> 欄</td><td><code>regression_results.csv</code>；本頁 E 區表格第 4 欄</td></tr>
+        <tr><td>Adjusted R²</td><td>回歸結果表的 <code>adj_r_squared</code> 欄</td><td><code>regression_results.csv</code>；本頁 E 區表格第 5 欄</td></tr>
+        <tr><td>VIF</td><td><code>vif_results.csv</code></td><td>只有 Model 3 會看 VIF，因為 Model 1/2 共線性風險低</td></tr>
+        <tr><td>Full-rank 排除了誰</td><td>程式跑完會記錄在 <code>dropped</code> 欄</td><td>本頁 E 區表格最後一欄「Full-rank 排除」</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">C. 三個模型到底放了什麼</h3>
+    <table class="col-table">
+      <tr><th>模型</th><th>Y 變數</th><th>X 變數</th><th>產業控制</th><th>定位</th></tr>
+      <tr><td><strong>Model 1</strong></td><td><code>CAR_m1_p1</code> 或 <code>CAR_m2_p2</code></td><td><code>Size</code>、<code>ROA</code>、<code>Leverage</code>、<code>Cash</code>、<code>CAPEX</code>、<code>PPE</code>、<code>RD</code>、<code>RD_dummy</code></td><td>無</td><td>基準主模型：先看公司特徵和 CAR 的關係。</td></tr>
+      <tr><td><strong>Model 2</strong></td><td><code>CAR_m1_p1</code> 或 <code>CAR_m2_p2</code></td><td>Model 1 的 8 個核心 X + <code>sic2</code> dummy</td><td>有，2-digit SIC industry fixed effects</td><td>最適合正式報告的主模型：保留 67 筆，又控制產業差異。</td></tr>
+      <tr><td><strong>Model 3</strong></td><td><code>CAR_m1_p1</code> 或 <code>CAR_m2_p2</code></td><td>Model 2 的核心 X + <code>MTB</code>、<code>CFO</code>、<code>Goodwill</code>、<code>Intangible</code>、<code>Current_Ratio</code>、<code>Log_Emp</code></td><td>有，2-digit SIC industry fixed effects</td><td>穩健性檢查：變數更多，但樣本少、共線性高，所以不作主要結論。</td></tr>
+    </table>
+    <div class="note">
+      <strong>為什麼 Model 1/2 不放 MTB、SGA、Payout？</strong>因為這些欄位會讓可用樣本變少。主模型的設計重點是先保留 67 筆 CAR 樣本；更多控制變數放到 Model 3 補充檢查。
+    </div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">D. SIC2、base category、dummy、full-rank 檢查</h3>
+    <table class="col-table">
+      <tr><th>項目</th><th>本次實際狀況</th><th>怎麼解釋</th></tr>
+      <tr><td>全部資料的 SIC2 數量</td><td>71 筆中共有 <strong>15</strong> 個 SIC2：<code>21</code>、<code>28</code>、<code>35</code>、<code>36</code>、<code>37</code>、<code>38</code>、<code>39</code>、<code>48</code>、<code>53</code>、<code>58</code>、<code>59</code>、<code>67</code>、<code>73</code>、<code>78</code>、<code>87</code></td><td>這是原始 regression data 中的產業大類分布。</td></tr>
+      <tr><td>Model 2 的 SIC2 數量</td><td>67 筆回歸樣本中仍有 <strong>15</strong> 個 SIC2；最多的是 <code>36</code>，有 13 筆</td><td>所以 Model 2 以 <code>36</code> 作為 base category。</td></tr>
+      <tr><td>Model 3 的 SIC2 數量</td><td>59 筆回歸樣本中有 <strong>13</strong> 個 SIC2；最多仍是 <code>36</code>，有 11 筆</td><td>Model 3 也以 <code>36</code> 作為 base category。</td></tr>
+      <tr><td>為什麼 <code>sic2_36</code> 沒有放進模型</td><td><code>36</code> 是 base category，所以刻意省略</td><td>其他產業 dummy 的係數都是「相對於 SIC2=36」的差異；如果公司屬於 36，所有其他 SIC2 dummy 都是 0。</td></tr>
+      <tr><td>Model 2 為什麼還排除 <code>sic2_58</code></td><td><code>sic2_58</code> 被 full-rank check 自動排除</td><td>這不是 base，也不是資料壞掉。它是因為在目前小樣本與其他欄位組合下會造成矩陣 rank 問題，所以程式把它拿掉，讓 OLS 可以正常估計。</td></tr>
+      <tr><td>Model 3 為什麼排除 <code>RD_dummy</code></td><td><code>RD_dummy</code> 被 full-rank check 自動排除</td><td>Model 3 使用較小的完整樣本，<code>RD_dummy</code> 在該樣本中缺乏足夠變異或與其他欄位重疊，因此被移除；這也是共線性/可估計性處理，不是資料錯誤。</td></tr>
+    </table>
+    <div class="info">
+      <strong>dummy 的讀法：</strong>如果公司是某個 SIC2，它對應的 <code>sic2_xx</code> 通常會是 1，其他 SIC2 dummy 是 0；但 base category 的那個 dummy 不會建立，所以 base 產業會表現為「所有其他產業 dummy 都是 0」。
+    </div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">E. 模型適配統計結果</h3>
+    <table class="col-table">
+      <tr><th>Outcome</th><th>Model</th><th>N</th><th>R²</th><th>Adjusted R²</th><th>df_resid</th><th>Base SIC2</th><th>Full-rank 排除</th><th>解讀</th></tr>
+      <tr><td><code>CAR_m1_p1</code></td><td>Model 1</td><td>67</td><td>0.472</td><td>0.399</td><td>58</td><td>無</td><td>無</td><td>基準模型，樣本完整，沒有控制產業。</td></tr>
+      <tr><td><code>CAR_m1_p1</code></td><td>Model 2</td><td>67</td><td>0.599</td><td>0.411</td><td>45</td><td><code>36</code></td><td><code>sic2_58</code></td><td>加入產業控制後 R² 上升，仍保留 67 筆，是主模型。</td></tr>
+      <tr><td><code>CAR_m1_p1</code></td><td>Model 3</td><td>59</td><td>0.492</td><td>0.107</td><td>36</td><td><code>36</code></td><td><code>RD_dummy</code></td><td>樣本下降且 Adjusted R² 低，僅補充檢查。</td></tr>
+      <tr><td><code>CAR_m2_p2</code></td><td>Model 1</td><td>67</td><td>0.475</td><td>0.402</td><td>58</td><td>無</td><td>無</td><td>基準模型，結果可和短視窗比較。</td></tr>
+      <tr><td><code>CAR_m2_p2</code></td><td>Model 2</td><td>67</td><td>0.551</td><td>0.341</td><td>45</td><td><code>36</code></td><td><code>sic2_58</code></td><td>控制產業後 ROA 仍穩定，仍是主模型。</td></tr>
+      <tr><td><code>CAR_m2_p2</code></td><td>Model 3</td><td>59</td><td>0.611</td><td>0.316</td><td>36</td><td><code>36</code></td><td><code>RD_dummy</code></td><td>R² 較高但變數很多、VIF 高，所以不宜過度解釋。</td></tr>
+    </table>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">F. 主要統計結果與 insights</h3>
+    <table class="col-table">
+      <tr><th>主題</th><th>統計結果</th><th>Insight</th><th>解讀限制</th></tr>
+      <tr><td><code>ROA</code></td><td>Model 2 中，<code>CAR_m1_p1</code> 係數 0.128867，p=0.0296；<code>CAR_m2_p2</code> 係數 0.203125，p=0.0270</td><td><span class="good">最穩定的正向結果</span>。控制產業後，獲利能力較好的公司在事件附近 CAR 較高。</td><td>是相關性，不代表 ROA 直接造成 CAR 上升。</td></tr>
+      <tr><td><code>CAPEX</code></td><td><code>CAR_m1_p1</code> Model 1 係數 0.589687，p=0.0701；Model 2 係數 0.849020，p=0.0378</td><td><span class="good">短視窗正向訊號</span>。資本支出強度較高的公司，短期市場反應較佳。</td><td>較長視窗與 Model 3 不夠穩定，所以應說成「短視窗觀察」。</td></tr>
+      <tr><td><code>RD</code></td><td><code>CAR_m1_p1</code> Model 1 係數 -0.230071，p=0.0338；Model 2 係數 -0.271674，p=0.0518</td><td><span class="bad">短視窗偏負向</span>。高研發強度公司在事件附近市場反應較弱。</td><td>不能直接說研發不好；可能反映高研發公司面對事件時的不確定性較高。</td></tr>
+      <tr><td><code>Size</code></td><td>單變數時 Size 正向顯著；但 <code>CAR_m1_p1</code> Model 2 中係數 -0.009190，p=0.0743</td><td>Size 的簡單關係可能混入 ROA、RD、產業等因素；多元模型中方向改變。</td><td>正式解讀不應只看單變數散點圖。</td></tr>
+      <tr><td>Model 2</td><td>兩個 CAR 都保留 N=67，base SIC2 = 36，df_resid=45</td><td>控制產業差異但沒有犧牲樣本數，是最適合作為主模型的規格。</td><td>產業 dummy 在小樣本下仍會吃自由度，解讀要保持保守。</td></tr>
+      <tr><td>Model 3</td><td>N=59；多個變數 VIF &gt; 10；<code>RD_dummy</code> 被 full-rank 排除</td><td>可以當 robustness check，但不適合作為主要故事。</td><td>變數多、樣本少、共線性高，單一係數不宜過度強調。</td></tr>
+      <tr><td>單變數回歸</td><td>ROA、RD、CFO、Size 在單變數中訊號強</td><td>適合用來畫散點圖、看原始趨勢。</td><td>沒有控制其他 X 與產業，所以正式結論仍以 Model 1/2 為主。</td></tr>
+    </table>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">G. 可以直接放進報告的方法文字</h3>
+    <div class="note">
+      本研究使用 <code>0515_final_compustat_firm.xlsx</code> 中 <code>prior_fyear_only (2)</code> sheet 的 71 筆公司/事件觀察值。財務控制變數由 Compustat 原始欄位計算而來，包含公司規模、獲利能力、槓桿、現金、資本支出、不動產廠房設備、研發強度與研發揭露 dummy。所有非 dummy 財務變數皆進行 1% 到 99% winsorize，以降低極端值對小樣本 OLS 的影響。Model 1 放入 8 個核心控制變數；Model 2 在 Model 1 基礎上加入 2-digit SIC 產業固定效果，並以樣本中最多的 <code>SIC2=36</code> 作為 base category；Model 3 再加入 MTB、CFO、Goodwill、Intangible、Current_Ratio 與 Log_Emp 作為穩健性檢查。回歸結果以 Model 1/2 為主要解讀依據，Model 3 因樣本降為 59 且 VIF 偏高，僅作補充。
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== TAB 6: MODEL 2 METHOD ===== -->
+<div class="panel" id="panel-model2method">
+
+  <div class="model-box">
+    <h3 style="font-size:16px; font-weight:700; margin-bottom:10px">Model 2 到底具體做了什麼？</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:10px">
+      Model 2 不是換一批財務變數，而是在 Model 1 的基礎上，多加一組「產業標籤」。目的很單純：先把不同產業本來就可能不同的平均市場反應扣掉，再看公司的財務特徵是否仍然有影響。
+    </p>
+    <div class="info">
+      <strong>一句話版：</strong>Model 1 是「所有公司混在一起比」；Model 2 是「先把公司分成不同產業，再比較同樣扣掉產業差異後，ROA、CAPEX、RD 這些公司特徵還有沒有影響」。
+    </div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">A. Model 2 的完整資料處理順序</h3>
+    <table class="col-table">
+      <tr><th>步驟</th><th>具體做法</th><th>白話意思</th></tr>
+      <tr><td>1</td><td>只使用兩個 CAR 有值的樣本；本次 Model 2 每個 CAR 都保留 <strong>67 筆</strong></td><td>先確認 Y 變數有資料，沒有 CAR 的列不能拿來跑回歸。</td></tr>
+      <tr><td>2</td><td>放入和 Model 1 一樣的 8 個核心 X：<code>Size</code>、<code>ROA</code>、<code>Leverage</code>、<code>Cash</code>、<code>CAPEX</code>、<code>PPE</code>、<code>RD</code>、<code>RD_dummy</code></td><td>這些是公司自己的財務特徵，Model 1 和 Model 2 完全相同。</td></tr>
+      <tr><td>3</td><td>讀取原始產業欄位 <code>sic</code></td><td><code>sic</code> 是公司產業分類代碼，可以把公司分到不同產業。</td></tr>
+      <tr><td>4</td><td>取 <code>sic</code> 的前兩碼變成 <code>sic2</code>，例如 <code>3674 → 36</code>、<code>4812 → 48</code></td><td>用大類產業，不切太細，因為你的樣本數很小。</td></tr>
+      <tr><td>5</td><td>把每個 <code>sic2</code> 轉成 dummy 欄位，例如 <code>sic2_36</code>、<code>sic2_48</code>、<code>sic2_73</code></td><td>每個 dummy 都是 0/1，1 代表這家公司屬於該產業，0 代表不是。</td></tr>
+      <tr><td>6</td><td>省略一個產業當 base category；本次 Model 2 的 base 是 <code>36</code></td><td>所有其他產業都是「相對於 SIC2=36」來比較。省略一個產業是數學上必要的，不然模型會重複計算。</td></tr>
+      <tr><td>7</td><td>若某個 dummy 和其他欄位完全重複，模型會自動丟掉以維持 full-rank；本次 Model 2 記錄到 <code>sic2_58</code> 被排除</td><td>這不是資料壞掉，而是避免模型因為欄位重複而算不出來。</td></tr>
+      <tr><td>8</td><td>用 OLS 跑：CAR = 8 個核心 X + 產業 dummy</td><td>最後估計每個財務特徵對 CAR 的關係，同時把產業平均差異控制住。</td></tr>
+    </table>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">B. Dummy 到底長什麼樣子？用假資料看一次</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:10px">假設有 4 家公司，原本只有一欄 <code>sic</code>。我們先取前兩碼變成 <code>sic2</code>：</p>
+    <table class="col-table">
+      <tr><th>公司</th><th>原始 <code>sic</code></th><th>取前兩碼後 <code>sic2</code></th><th>白話產業大類</th></tr>
+      <tr><td>A 公司</td><td>3674</td><td>36</td><td>電子/電機相關大類</td></tr>
+      <tr><td>B 公司</td><td>4812</td><td>48</td><td>通訊相關大類</td></tr>
+      <tr><td>C 公司</td><td>7372</td><td>73</td><td>商業服務/軟體相關大類</td></tr>
+      <tr><td>D 公司</td><td>3679</td><td>36</td><td>電子/電機相關大類</td></tr>
+    </table>
+    <p style="font-size:13px; color:var(--text); margin:12px 0 10px">接著把 <code>sic2</code> 轉成 dummy。假設 <code>36</code> 是 base category，所以不建立 <code>sic2_36</code>，只建立其他產業 dummy：</p>
+    <table class="col-table">
+      <tr><th>公司</th><th><code>sic2</code></th><th><code>sic2_48</code></th><th><code>sic2_73</code></th><th>模型怎麼理解</th></tr>
+      <tr><td>A 公司</td><td>36</td><td>0</td><td>0</td><td>兩個 dummy 都是 0，所以它屬於 base 產業 36。</td></tr>
+      <tr><td>B 公司</td><td>48</td><td>1</td><td>0</td><td>它是 48 產業，模型會估計 48 產業相對於 36 產業的平均差異。</td></tr>
+      <tr><td>C 公司</td><td>73</td><td>0</td><td>1</td><td>它是 73 產業，模型會估計 73 產業相對於 36 產業的平均差異。</td></tr>
+      <tr><td>D 公司</td><td>36</td><td>0</td><td>0</td><td>它也屬於 base 產業 36。</td></tr>
+    </table>
+    <div class="note">
+      <strong>重點：</strong>dummy 不是新的財務指標，它只是告訴模型「這家公司是哪個產業」。加入 dummy 後，<code>ROA</code> 的係數就比較像是在回答：「在扣掉產業平均差異後，ROA 較高的公司 CAR 是否比較高？」
+    </div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">C. Model 1 和 Model 2 的差別</h3>
+    <table class="col-table">
+      <tr><th>項目</th><th>Model 1</th><th>Model 2</th></tr>
+      <tr><td>核心財務 X 變數</td><td>8 個：Size、ROA、Leverage、Cash、CAPEX、PPE、RD、RD_dummy</td><td>同樣 8 個，完全一樣</td></tr>
+      <tr><td>是否加入產業控制</td><td>沒有</td><td>有，用 <code>sic</code> 前兩碼產生產業 dummy</td></tr>
+      <tr><td>樣本數</td><td>67</td><td>67</td></tr>
+      <tr><td>模型在問什麼</td><td>所有公司混在一起時，公司財務特徵和 CAR 有沒有關係？</td><td>扣掉不同產業平均差異後，公司財務特徵和 CAR 還有沒有關係？</td></tr>
+      <tr><td>為什麼 Model 2 更適合報告</td><td>比較簡單，但可能混到產業差異</td><td>比較嚴謹，因為科技、零售、通訊等產業本來就可能有不同 CAR</td></tr>
+    </table>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">D. RD 和 RD_dummy 到底是什麼？</h3>
+    <p style="font-size:13px; color:var(--text); margin-bottom:10px">
+      <code>RD</code> 是研發支出強度，公式是 <code>xrd / at</code>。意思是：公司每 1 元資產裡，有多少比例花在研發。問題是 Compustat 裡很多公司的 <code>xrd</code> 是空白，不一定代表公司真的沒有研發，也可能只是沒有揭露。所以我們不能只把它當普通缺值刪掉，否則樣本會變少。
+    </p>
+    <table class="col-table">
+      <tr><th>情境</th><th>原始 <code>xrd</code></th><th>原始 <code>at</code></th><th>處理後 <code>RD</code></th><th><code>RD_dummy</code></th><th>白話意思</th></tr>
+      <tr><td>公司有揭露研發，且金額大於 0</td><td>50</td><td>1000</td><td>0.050000</td><td>1</td><td>這家公司有研發資料，研發支出約占資產 5%。</td></tr>
+      <tr><td>公司有揭露研發，但金額是 0</td><td>0</td><td>1000</td><td>0.000000</td><td>1</td><td>這家公司有揭露，且研發支出就是 0。</td></tr>
+      <tr><td>公司沒有揭露研發</td><td>NaN</td><td>1000</td><td>0.000000</td><td>0</td><td>為了保留樣本，先把研發當 0；但用 dummy 告訴模型「這筆原本是缺值」。</td></tr>
+    </table>
+    <div class="info">
+      <strong>最重要的理解：</strong><code>RD</code> 管「研發支出占資產多少」；<code>RD_dummy</code> 管「原本有沒有真的揭露研發資料」。兩個一起放，是為了不要把「真的研發為 0」和「資料缺失被補 0」混在一起。
+    </div>
+  </div>
+
+  <div class="model-box">
+    <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">E. 用一句話解讀本次 Model 2</h3>
+    <table class="col-table">
+      <tr><th>結果</th><th>白話意思</th><th>為什麼重要</th></tr>
+      <tr><td><code>ROA</code> 在兩個 CAR 視窗都正向且 5% 顯著</td><td>扣掉產業差異後，獲利能力越好的公司，事件附近市場反應越好。</td><td>這是本次最穩定、最適合報告的結果。</td></tr>
+      <tr><td><code>CAPEX</code> 對 <code>CAR_m1_p1</code> 正向且 5% 顯著</td><td>短視窗中，資本支出強度較高的公司，市場反應較正面。</td><td>加入產業控制後仍存在，代表它不只是產業差異造成。</td></tr>
+      <tr><td><code>RD</code> 對 <code>CAR_m1_p1</code> 負向，接近 5%，達 10% 顯著</td><td>高研發強度公司在短視窗裡市場反應偏弱。</td><td>可以當作重要觀察，但要保守說明，不能直接說研發不好。</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<!-- ===== TAB 7: CLAUDE CODE STEPS ===== -->
+<div class="panel" id="panel-steps">
+
+  <p style="color:var(--muted); font-size:13px; margin-bottom:16px">以下是你依序給 Claude Code 的完整指令。共 5 個步驟，每個步驟複製貼上一次即可。</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h4>計算所有財務指標（Model 1+2 的 8 個 + Model 3 額外控制）</h4>
+        <p>使用 <code>prior_fyear_only (2)</code> 這個 sheet，計算以下指標：<br><br>
+        <strong style="color:var(--text)">主模型核心 8 個（Model 1、2、3 都用）：</strong><br>
+        <code>Size = log(at)</code><br>
+        <code>ROA = ni / at</code><br>
+        <code>Leverage = (dltt + dlc) / at</code><br>
+        <code>Cash = che / at</code><br>
+        <code>CAPEX = capx / at</code><br>
+        <code>PPE = ppent / at</code><br>
+        <code>RD = xrd / at</code>（xrd 的 NaN 填 0；同時建立 <code>RD_dummy</code>：原本有值=1，原本 NaN=0）<br><br>
+        <strong style="color:var(--text)">補充指標（Model 3 或描述統計用）：</strong><br>
+        <code>MTB = mkvalt / ceq</code>；若 <code>mkvalt</code> 缺值，改用 <code>prcc_f × csho / ceq</code>（若 ceq ≤ 0 設為 NaN）<br>
+        <code>CFO = oancf / at</code><br>
+        <code>Goodwill = gdwl / at</code><br>
+        <code>Intangible = intan / at</code><br>
+        <code>Current_Ratio = act / lct</code>（若 lct = 0 設為 NaN）<br>
+        <code>Log_Emp = log(emp + 1)</code><br>
+        <code>SGA = xsga / at</code>、<code>Payout = dvc / ni</code> 只計算與輸出描述統計，不放目前三個模型。<br><br>
+        對全部非 dummy 財務指標做 1%–99% winsorize；<code>RD_dummy</code> 不 winsorize。<br>
+        輸出 <code>compustat_controls_clean.csv</code>，保留識別欄位：<code>final_PERMNO、final_comment_id、final_Ticker、gvkey、fyear、sic</code>。<br>
+        最後 print 每個指標的非空值數量。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h4>確認 CAR 欄位並輸出回歸資料</h4>
+        <p>CAR 欄位已經存在於 <code>prior_fyear_only (2)</code>：<code>CAR_m1_p1</code>、<code>CAR_m2_p2</code>。<br>
+        不需要再合併外部 CAR 檔，直接把清理後資料另存為 <code>regression_data.csv</code>，並 print 兩個 CAR 欄位各有幾筆非空值。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h4>描述性統計表</h4>
+        <p>對 <code>regression_data.csv</code> 裡的 CAR 與所有已計算控制變數輸出描述性統計：<br>
+        N、mean、std、min、25th percentile、median、75th percentile、max。<br>
+        輸出 <code>descriptive_stats.csv</code>。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h4>跑 3 個 OLS 回歸，輸出並排結果表</h4>
+        <p>用 <code>numpy/scipy</code> 跑以下三個 OLS 模型，Y = CAR；<code>CAR_m1_p1</code>、<code>CAR_m2_p2</code> 各跑一次：<br><br>
+        <strong>Model 1（Column 1）</strong>：X = Size、ROA、Leverage、Cash、CAPEX、PPE、RD、RD_dummy。不加產業固定效果。<br><br>
+        <strong>Model 2（Column 2）</strong>：X 同 Model 1，額外加入產業固定效果（用 <code>sic</code> 欄位前 2 位數字建立 2-digit SIC dummy，以樣本中公司最多的產業為 base category 省略）。<br><br>
+        <strong>Model 3（Column 3）</strong>：X = Model 2 的全部變數 + MTB、CFO、Goodwill、Intangible、Current_Ratio、Log_Emp，加產業固定效果。<br><br>
+        輸出一張<strong>並排比較表</strong>（論文格式），包含：係數、括號內標準誤、顯著性星號（* p&lt;0.1, ** p&lt;0.05, *** p&lt;0.01）、每個 model 的 N、R²、Adjusted R²。<br>
+        同時輸出 <code>regression_results.csv</code>。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h4>檢查 Model 3 的多重共線性（VIF）</h4>
+        <p>對 Model 3 的所有 X 變數計算 VIF（Variance Inflation Factor）。<br>
+        VIF &gt; 10 代表嚴重多重共線性，需要注意；VIF &gt; 5 代表中度，寫在論文裡說明。<br>
+        輸出 <code>vif_results.csv</code>。<br><br>
+        <span style="color:var(--muted)">這一步是因為 Model 3 變數多、風險高，做完之後你才能判斷 Model 3 的結果是否可信。如果 VIF 很高，在論文裡直接說明「Model 3 僅作為參考，解釋以 Model 1、2 為主」即可。</span></p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+function toggleSection(header) {
+  header.parentElement.classList.toggle('open');
+}
+
+function filterTeacherResults(filter, button) {
+  document.querySelectorAll('.teacher-model-filter button').forEach(btn => {
+    const buttonFilter = btn.getAttribute('onclick') || '';
+    btn.classList.toggle('active', buttonFilter.includes("'" + filter + "'"));
+  });
+  if (button) button.classList.add('active');
+
+  document.querySelectorAll('.teacher-result-section').forEach(section => {
+    const shouldShow = filter === 'all' || section.classList.contains('result-' + filter);
+    section.classList.toggle('is-hidden', !shouldShow);
+  });
+
+  document.querySelectorAll('.teacher-finding-row').forEach(row => {
+    const shouldShow = filter === 'all' || row.classList.contains('result-' + filter);
+    row.classList.toggle('is-hidden', !shouldShow);
+  });
+}
+</script>
+
+</body>
+</html>

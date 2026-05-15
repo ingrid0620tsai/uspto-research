@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>USPTO Comment Letter — 變數設計與研究框架</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #F7F5F0;
+  --surface: #FFFFFF;
+  --surface2: #F0EDE6;
+  --ink: #1A1814;
+  --ink2: #5C584F;
+  --ink3: #9B978D;
+  --rule: #DDD9D0;
+  --accent-coral: #C84B2F;
+  --accent-teal: #1A6B54;
+  --accent-blue: #1E4A8C;
+  --accent-amber: #8C5A0A;
+  --accent-purple: #4A3D8C;
+  --accent-gray: #5C584F;
+  --pill-coral-bg: #FAE8E4; --pill-coral-fg: #7A2A18;
+  --pill-teal-bg: #E0F0EA; --pill-teal-fg: #0D4030;
+  --pill-blue-bg: #E2EBF8; --pill-blue-fg: #0D2D5C;
+  --pill-amber-bg: #FAF0DC; --pill-amber-fg: #5C3606;
+  --pill-purple-bg: #EDEAF8; --pill-purple-fg: #2A2058;
+  --pill-gray-bg: #EDEBE4; --pill-gray-fg: #3A3830;
+  --neg-bg: #FAECEC; --neg-fg: #6B1A1A;
+  --neu-bg: #EDEBE4; --neu-fg: #3A3830;
+  --pos-bg: #E4F0E8; --pos-fg: #1A4A28;
+  --mixed-bg: #FAF0DC; --mixed-fg: #5C3606;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.page-wrap { max-width: 980px; margin: 0 auto; padding: 48px 32px 80px; }
+
+/* ── Header ── */
+.page-header { margin-bottom: 52px; }
+.header-eyebrow { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--ink3); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 14px; }
+.header-title { font-family: 'DM Serif Display', serif; font-size: 38px; line-height: 1.15; color: var(--ink); margin-bottom: 10px; }
+.header-title em { color: var(--accent-coral); font-style: italic; }
+.header-sub { font-size: 14px; color: var(--ink2); max-width: 580px; line-height: 1.7; margin-bottom: 24px; }
+.header-rule { height: 1px; background: var(--rule); }
+
+/* ── Nav tabs ── */
+.nav-wrap { display: flex; gap: 0; border-bottom: 1px solid var(--rule); margin-bottom: 40px; overflow-x: auto; }
+.nav-btn {
+  font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .06em;
+  text-transform: uppercase; padding: 12px 20px; border: none; background: none;
+  color: var(--ink3); cursor: pointer; border-bottom: 2px solid transparent;
+  transition: color .15s, border-color .15s; white-space: nowrap;
+}
+.nav-btn:hover { color: var(--ink); }
+.nav-btn.active { color: var(--ink); border-bottom-color: var(--ink); }
+
+/* ── Section ── */
+.section { display: none; }
+.section.active { display: block; }
+.section-intro { color: var(--ink2); font-size: 13.5px; line-height: 1.75; margin-bottom: 32px; max-width: 700px; }
+
+/* ── Utility ── */
+.label-mono { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.pill { display: inline-block; font-family: 'DM Mono', monospace; font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+.pill-coral { background: var(--pill-coral-bg); color: var(--pill-coral-fg); }
+.pill-teal { background: var(--pill-teal-bg); color: var(--pill-teal-fg); }
+.pill-blue { background: var(--pill-blue-bg); color: var(--pill-blue-fg); }
+.pill-amber { background: var(--pill-amber-bg); color: var(--pill-amber-fg); }
+.pill-purple { background: var(--pill-purple-bg); color: var(--pill-purple-fg); }
+.pill-gray { background: var(--pill-gray-bg); color: var(--pill-gray-fg); }
+.pill-neg { background: var(--neg-bg); color: var(--neg-fg); }
+.pill-neu { background: var(--neu-bg); color: var(--neu-fg); }
+.pill-pos { background: var(--pos-bg); color: var(--pos-fg); }
+.pill-mixed { background: var(--mixed-bg); color: var(--mixed-fg); }
+.rec { background: var(--accent-teal); color: #fff; }
+
+/* ── Cards ── */
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
+.card-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--rule); display: flex; align-items: flex-start; gap: 14px; }
+.card-num { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink3); padding-top: 3px; min-width: 20px; }
+.card-meta { flex: 1; }
+.card-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.card-title { font-size: 15px; font-weight: 600; }
+.card-desc { font-size: 12.5px; color: var(--ink2); }
+.card-body { padding: 20px 24px; }
+
+/* ── Stance split ── */
+.stance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.stance-col { padding: 18px 20px; }
+.stance-col + .stance-col { border-left: 1px solid var(--rule); }
+.stance-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+.stance-name { font-size: 13.5px; font-weight: 600; }
+.stance-eg { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--ink3); margin-bottom: 8px; }
+.stance-desc { font-size: 12.5px; color: var(--ink2); line-height: 1.6; margin-bottom: 10px; }
+.mech { background: var(--surface2); border-radius: 8px; padding: 10px 12px; font-size: 12px; color: var(--ink2); }
+.mech span { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink3); display: block; margin-bottom: 3px; }
+.tag-row { display: flex; gap: 6px; flex-wrap: wrap; padding: 14px 20px; border-top: 1px solid var(--rule); background: var(--surface2); }
+.tag { font-size: 11px; padding: 3px 10px; border-radius: 20px; background: var(--bg); border: 1px solid var(--rule); color: var(--ink2); }
+
+/* ── Variable table-style ── */
+.var-list { display: flex; flex-direction: column; gap: 0; }
+.var-row { display: grid; grid-template-columns: 200px 80px 1fr; gap: 0; border-bottom: 1px solid var(--rule); align-items: start; }
+.var-row:last-child { border-bottom: none; }
+.var-col { padding: 14px 16px; }
+.var-col:not(:last-child) { border-right: 1px solid var(--rule); }
+.var-name { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: var(--ink); margin-bottom: 3px; }
+.var-source { font-size: 11px; color: var(--ink3); }
+.var-type-label { font-size: 11px; font-weight: 500; }
+.var-desc { font-size: 12.5px; color: var(--ink2); line-height: 1.55; }
+.var-header-row { display: grid; grid-template-columns: 200px 80px 1fr; background: var(--surface2); border-bottom: 1px solid var(--rule); }
+.var-header-col { padding: 10px 16px; font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink3); }
+.var-header-col:not(:last-child) { border-right: 1px solid var(--rule); }
+
+/* ── Prompt box ── */
+.prompt-card { background: #1A1814; border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
+.prompt-header { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2E2B25; }
+.prompt-header-title { font-family: 'DM Mono', monospace; font-size: 11px; color: #9B978D; letter-spacing: .06em; }
+.prompt-badge { font-family: 'DM Mono', monospace; font-size: 10px; padding: 2px 8px; border-radius: 20px; }
+.prompt-body { padding: 20px; font-family: 'DM Mono', monospace; font-size: 12px; color: #C8C4BA; line-height: 1.8; }
+.prompt-body .kw { color: #E8A87C; }
+.prompt-body .val { color: #7EC8A8; }
+.prompt-body .cm { color: #6B675E; font-style: italic; }
+.prompt-body .hl { color: #F0D080; }
+
+/* ── Story-var map ── */
+.story-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.story-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
+.story-card-header { padding: 14px 18px 12px; border-bottom: 1px solid var(--rule); }
+.story-num { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink3); margin-bottom: 4px; }
+.story-title { font-size: 13.5px; font-weight: 600; margin-bottom: 4px; }
+.story-pred { font-size: 12px; color: var(--ink2); }
+.story-body { padding: 14px 18px; }
+.story-var-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; font-size: 12px; }
+.story-var-row:last-child { margin-bottom: 0; }
+.story-var-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink3); min-width: 52px; padding-top: 2px; }
+.story-logic { font-size: 12px; color: var(--ink2); line-height: 1.55; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--rule); }
+
+/* ── Tooltip / Glossary ── */
+.gloss {
+  border-bottom: 1.5px dashed var(--accent-blue);
+  color: var(--accent-blue);
+  cursor: help;
+  position: relative;
+  display: inline;
+}
+.gloss::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1A1814;
+  color: #F7F5F0;
+  font-family: 'Syne', sans-serif;
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.55;
+  padding: 8px 12px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  max-width: 260px;
+  min-width: 160px;
+  width: max-content;
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+  z-index: 999;
+  box-shadow: 0 4px 16px rgba(0,0,0,.22);
+}
+.gloss:hover::after { opacity: 1; }
+
+/* ── Newbie box ── */
+.newbie-box {
+  background: linear-gradient(135deg, #EAF4FF 0%, #F0EDE6 100%);
+  border: 1.5px solid #1E4A8C30;
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+}
+.newbie-box-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 17px;
+  color: var(--accent-blue);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.newbie-box-body {
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.8;
+}
+.newbie-box-body strong { color: var(--ink); }
+
+/* ── ELI5 inline block ── */
+.eli5 {
+  display: block;
+  background: #FFF9EC;
+  border-left: 3px solid var(--accent-amber);
+  border-radius: 0 8px 8px 0;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: #5C3606;
+  line-height: 1.6;
+  margin-top: 7px;
+}
+.eli5::before { content: "🐣 白話版："; font-weight: 600; }
+
+/* ── Notes ── */
+.note-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.note-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 16px 18px; }
+.note-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.note-icon { font-family: 'DM Mono', monospace; font-size: 11px; background: var(--surface2); border-radius: 6px; padding: 2px 7px; color: var(--ink3); }
+.note-body { font-size: 12.5px; color: var(--ink2); line-height: 1.65; }
+
+/* ── Framework comparison (sec. 1) ── */
+.fw-comparison { display: flex; flex-direction: column; gap: 14px; }
+
+@media (max-width: 700px) {
+  .stance-grid { grid-template-columns: 1fr; }
+  .stance-col + .stance-col { border-left: none; border-top: 1px solid var(--rule); }
+  .var-row, .var-header-row { grid-template-columns: 1fr; }
+  .var-col:not(:last-child), .var-header-col:not(:last-child) { border-right: none; border-bottom: 1px solid var(--rule); }
+  .story-grid { grid-template-columns: 1fr; }
+  .note-grid { grid-template-columns: 1fr; }
+  .page-wrap { padding: 32px 18px 60px; }
+  .header-title { font-size: 28px; }
+}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <div class="page-header">
+    <div class="header-eyebrow">USPTO Comment Letters — Research Design</div>
+    <h1 class="header-title">Letter Variables &amp; <em>Story</em> Framework</h1>
+    <p class="header-sub">從原始 comment letter 出發的完整變數設計、立場分類邏輯、AI prompt 規格，以及與 CARs 分析的對應關係。</p>
+    <div class="header-rule"></div>
+  </div>
+
+  <nav class="nav-wrap">
+    <button class="nav-btn active" onclick="showSection('s0', this)">0. Comment Letter 語料庫</button>
+    <button class="nav-btn" onclick="showSection('s1', this)">I. 核心立場變數</button>
+    <button class="nav-btn" onclick="showSection('s2', this)">II. 文本特徵變數</button>
+    <button class="nav-btn" onclick="showSection('s3', this)">III. 企業特徵代理</button>
+    <button class="nav-btn" onclick="showSection('s4', this)">IV. AI Prompt 設計</button>
+    <button class="nav-btn" onclick="showSection('s5', this)">V. 故事 × 變數對應</button>
+    <button class="nav-btn" onclick="showSection('s6', this)">VI. 資料處理</button>
+  </nav>
+
+  <!-- ────────────────── S0 Comment Letter 語料庫 ────────────────── -->
+  <div id="s0" class="section active">
+    <p class="section-intro">
+      本節整理目前語料庫中所有 Comment Letters 的基本資訊、所回應的 USPTO 原始法規發布，以及各企業評論大綱。語料庫涵蓋三個不同 docket 的 Patent 評論（PTAB 裁量程序、Terminal Disclaimer、2025 PTAB 修訂規則）與一個 Trademark 評論，以及一篇 SEC 評論信件的學術參考論文。
+    </p>
+
+    <!-- ── 新手入門解說 ── -->
+    <div class="newbie-box">
+      <div class="newbie-box-title">🎒 完全新手？先從這裡看懂整個故事</div>
+      <div class="newbie-box-body">
+
+        <strong>第一步：什麼是「專利」（Patent）？</strong><br>
+        專利就是政府給發明人的一張「獨家使用許可證」。你發明了一個東西，政府說「好，接下來 20 年，只有你能做這個，別人要用要付你錢」。這是鼓勵大家發明創新的制度。<br><br>
+
+        <strong>第二步：什麼是 USPTO？</strong><br>
+        <strong>USPTO</strong>（United States Patent and Trademark Office，美國專利商標局）就是美國負責核發專利的政府機關。你想要申請專利，就要去 USPTO 登記。USPTO 也負責審查商標（就是品牌名稱、Logo 等等）。<br><br>
+
+        <strong>第三步：有了專利後，問題來了——「壞專利」怎麼辦？</strong><br>
+        USPTO 有時候會不小心核發「不該核的專利」——例如，某人申請了一個其實早就有人做過的東西，USPTO 因為沒查到而核發了。這個「壞專利」就變成了一個武器，持有人可以拿它去告別人索賠。<br><br>
+
+        <strong>第四步：什麼是 PTAB？</strong><br>
+        <strong>PTAB</strong>（Patent Trial and Appeal Board，專利審判暨上訴委員會）是 USPTO 裡面的一個「法庭」。如果你覺得某個專利是「壞專利」（不該核發的），你可以向 PTAB 提出申請，請 PTAB 重新審查，把那個專利撤掉。這比去一般法院打官司快很多、便宜很多。<br><br>
+
+        <strong>第五步：什麼是 IPR？</strong><br>
+        <strong>IPR</strong>（Inter Partes Review，多方複審）是 PTAB 下面最常用的一種複審程序。「Inter Partes」是拉丁文，意思是「雙方之間」。簡單說：A 公司覺得 B 公司的專利無效，A 就向 PTAB 提 IPR，請求重新審查。PTAB 會審查後決定要不要「開庭」（institute），開庭後再決定那個專利有沒有效。<br><br>
+
+        <strong>第六步：什麼是「Comment Letter」（評論信件）？</strong><br>
+        當美國政府機關（包括 USPTO）想要制定新規則時，必須先公開徵詢意見——任何人、任何公司都可以寄信去說「我支持／我反對，理由是…」。這些信就叫做 Comment Letters。本研究就是在分析這些信件：哪些公司寄了？寄了什麼？為什麼？股價有沒有反應？<br><br>
+
+        <strong>第七步：為什麼公司要寄這些信？</strong><br>
+        因為規則改變會直接影響公司的利益。比如：<br>
+        · 一家靠「收專利授權費」維生的公司（像 Dolby）會希望 IPR 申請門檻變高，讓別人更難來撤銷它的專利<br>
+        · 一家常被「專利流氓」告的公司（像 Apple、Intel）會希望 IPR 門檻維持低，讓它隨時可以用 IPR 反擊壞專利<br>
+        · 一家農業新創（像 Inari）被大企業的「專利叢林」擋住進入市場，會希望規則改得讓大企業更難堆疊專利<br><br>
+
+        <strong>第八步：什麼是「Docket」？</strong><br>
+        每次 USPTO 公開徵詢意見，都會有一個編號，叫做 Docket（案件號碼）。不同的 Docket 代表不同的議題。你可以把它想成「討論主題的流水號」。本研究的語料庫涵蓋 4 個 Patent Docket 和 1 個 Trademark Docket。<br><br>
+
+        <strong>🧭 讀下面每封信之前，只需記住三件事：</strong><br>
+        1. <strong>公司寄信的目的</strong>：保護自己的現有收益（Defensive），還是想讓挑戰別人更容易（Offensive）？<br>
+        2. <strong>它在回應哪個 USPTO 提案</strong>：每張 Docket 卡片都有說明那次 USPTO 想改什麼<br>
+        3. <strong>它的論點是什麼</strong>：看「主要論點大綱」欄，都有白話解說
+
+      </div>
+    </div>
+
+    <!-- ── 常用術語快查表 ── -->
+    <div style="margin-bottom:8px">
+      <span class="label-mono" style="color:var(--ink3)">🔑 術語快查表（滑鼠移到內文藍色虛線字也可看到解釋）</span>
+    </div>
+    <div class="card" style="margin-bottom:32px">
+      <div class="var-header-row" style="grid-template-columns:180px 1fr">
+        <div class="var-header-col">術語</div>
+        <div class="var-header-col">白話解釋</div>
+      </div>
+      <div class="var-list">
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">USPTO</div><div class="var-source">U.S. Patent & Trademark Office</div></div>
+          <div class="var-col"><div class="var-desc">美國專利商標局。負責核發專利和商標的政府機關，有點像「發牌照」的地方。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">PTAB</div><div class="var-source">Patent Trial and Appeal Board</div></div>
+          <div class="var-col"><div class="var-desc">USPTO 內部的「法庭」，專門重新審查是否有效。你覺得某個專利不該存在，就告到這裡。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">IPR</div><div class="var-source">Inter Partes Review</div></div>
+          <div class="var-col"><div class="var-desc">「多方複審」，向 PTAB 申請撤銷別人的專利。A 告訴 PTAB：「這個專利根本是假的，幫我撤掉。」</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">PGR</div><div class="var-source">Post-Grant Review</div></div>
+          <div class="var-col"><div class="var-desc">「授權後複審」，類似 IPR，但只能在專利核發後的前 9 個月內提出，可以挑戰的理由更廣。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">AIA</div><div class="var-source">America Invents Act</div></div>
+          <div class="var-col"><div class="var-desc">「美國發明法案」，2011 年通過的重要專利改革法。它創立了 PTAB 和 IPR 制度，讓撤銷壞專利變得更容易。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">NPE / Patent Troll</div><div class="var-source">Non-Practicing Entity</div></div>
+          <div class="var-col"><div class="var-desc">「非實施主體」，俗稱「專利流氓」。它們囤積大量專利，但自己不做產品，只靠告別人侵權來賺錢。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">PAE</div><div class="var-source">Patent Assertion Entity</div></div>
+          <div class="var-col"><div class="var-desc">「專利主張實體」，和 NPE / Patent Troll 意思類似，是比較正式的說法。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">Discretionary Denial</div><div class="var-source">裁量性拒絕受理</div></div>
+          <div class="var-col"><div class="var-desc">PTAB 局長有權「自行裁量」決定要不要受理某個 IPR，即使申請人技術上符合條件也可以拒絕。主要爭議是：這個權力要用在哪些情況？怎麼才能讓規則更清楚？</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">Fintiv 法則</div><div class="var-source">Apple v. Fintiv 前例</div></div>
+          <div class="var-col"><div class="var-desc">一個由 PTAB 自己訂出的「裁量拒絕」標準。大意是：如果你同時也在一般法院打專利訴訟，PTAB 可能以「效率」為由拒絕受理 IPR，讓你只在法院打。這個做法被 IPR 使用者強烈反對，因為法院打官司貴很多。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">Terminal Disclaimer</div><div class="var-source">終期聲明放棄</div></div>
+          <div class="var-col"><div class="var-desc">一種文件，讓兩個幾乎相同的專利綁在一起，同時到期。本來是為了防止公司用「微小差異」重複申請相似專利來延長保護期。2024 年的提案想讓這個機制更嚴格：一個無效，全部無效。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">Patent Thicket</div><div class="var-source">專利灌木叢</div></div>
+          <div class="var-col"><div class="var-desc">大公司圍繞一項核心技術，申請大量些微不同的專利，形成一道「專利灌木叢」，讓競爭對手無從下手，無法進入市場。製藥業和農業科技業最常見。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">ANPRM</div><div class="var-source">Advance Notice of Proposed Rulemaking</div></div>
+          <div class="var-col"><div class="var-desc">「預先通知」，比草案更早期的徵詢意見。政府說：「我們在想要不要改規則，你們先來說說意見，我們再決定要不要寫成草案。」</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">NPRM</div><div class="var-source">Notice of Proposed Rulemaking</div></div>
+          <div class="var-col"><div class="var-desc">「規則草案公告」，比 ANPRM 更具體。政府已經寫好了規則草案，放出來讓大家評論，評論後才決定是否定案。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">Docket</div><div class="var-source">案件號</div></div>
+          <div class="var-col"><div class="var-desc">每次 USPTO 公開徵詢的唯一編號，例如 PTO-P-2020-0022。就像討論串的 ID，所有相關的評論信件都歸在同一個號碼下。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">Estoppel</div><div class="var-source">禁反言／禁止翻案</div></div>
+          <div class="var-col"><div class="var-desc">法律概念：你在 PTAB 提了 IPR，如果後來在法院還想再用同樣理由挑戰那個專利，法律說「不行，你已經在 PTAB 用過這個論點了（或本來可以用卻沒用），不能再來一次」。2025 NPRM 想把這個範圍大幅擴大，被許多公司強烈反對。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">Obviousness-Type Double Patenting</div><div class="var-source">顯而易見型雙重專利</div></div>
+          <div class="var-col"><div class="var-desc">簡稱 OTDP。法院創造的規則：如果你的兩個專利，其中一個相對另一個「顯而易見」（微小變化），那就算是非法的雙重保護，需要用 Terminal Disclaimer 把兩者生命期綁在一起。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">Regulations.gov</div><div class="var-source">聯邦法規徵詢平台</div></div>
+          <div class="var-col"><div class="var-desc">美國政府的公開評論平台網站，所有聯邦機關的規則草案都在這裡公開，任何人都可以上去看和留言。本研究的 Comment Letters 都來自這個網站。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">RPI / Privy</div><div class="var-source">Real Party in Interest / 利害關係人</div></div>
+          <div class="var-col"><div class="var-desc">「真正的利益當事人」。IPR 申請人必須揭露誰是幕後真正的利益相關者，以防止有人找人頭申請。如果 A 公司讓子公司去申請 IPR，A 就是 RPI，需要一起揭露。</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns:180px 1fr">
+          <div class="var-col"><div class="var-name">CAR（CARs）</div><div class="var-source">Cumulative Abnormal Return</div></div>
+          <div class="var-col"><div class="var-desc">「累積異常報酬」，是本研究的核心財務指標。就是：在某個事件發生前後，公司股票的漲跌幅超出市場平均的部分。如果 CARs 顯著為負，代表市場認為這件事對公司是壞消息。</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Docket 群組標題 ── -->
+    <div style="margin-bottom:8px;margin-top:28px">
+      <span class="label-mono" style="color:var(--accent-coral)">Docket 1 — PTO-P-2020-0022</span>
+    </div>
+    <div class="note-card" style="margin-bottom:20px;background:var(--pill-coral-bg);border-color:var(--accent-coral)20">
+      <div class="note-title"><span class="note-icon" style="background:var(--pill-coral-bg);color:var(--accent-coral)">USPTO</span>原始發布：<span class="gloss" data-tip="ANPRM = Advance Notice of Proposed Rulemaking&#10;規則草案的前身。政府說「我們在考慮改規則，先來聽你們的意見，還沒到寫草案的步驟」。">ANPRM</span> → <span class="gloss" data-tip="NPRM = Notice of Proposed Rulemaking&#10;已經寫出具體草案，放出來讓大家評論，之後才決定要不要定案。">NPRM</span>（<span class="gloss" data-tip="PTAB = Patent Trial and Appeal Board&#10;USPTO 內部的「法庭」，專門審查別人提出的「這個專利是廢的」申請。">PTAB</span> 裁量程序）</div>
+      <div class="note-body">
+        <strong><span class="gloss" data-tip="ANPRM = 最初期的徵詢意見，還不是正式草案。">ANPRM</span></strong> · 88 Fed. Reg. 24,503 · 2023年4月21日<br>
+        標題：<em>Changes Under Consideration to <span class="gloss" data-tip="裁量性受理實務（Discretionary Institution Practices）&#10;PTAB 局長有權決定要不要受理 IPR 申請，即使申請人符合條件也可以拒絕。這次要討論這個「拒絕」權力的邊界在哪。">Discretionary Institution Practices</span>, Petition Word-Count Limits, and Settlement Practices for <span class="gloss" data-tip="AIA = America Invents Act（美國發明法案）&#10;2011 年通過的專利改革法，創設了 PTAB、IPR 等制度。">America Invents Act</span> Trial Proceedings Before the PTAB</em><br>
+        評論截止：2023年6月20日 · 收到逾 <strong>14,500 則評論</strong><br>
+        <a href="https://www.regulations.gov/docket/PTO-P-2020-0022" target="_blank" style="color:var(--accent-coral);font-family:monospace;font-size:11px">regulations.gov/docket/PTO-P-2020-0022</a>
+        <hr style="margin:10px 0;border:none;border-top:1px solid var(--rule)">
+        <strong>核心議題：</strong>USPTO 考慮針對 <span class="gloss" data-tip="IPR = Inter Partes Review（多方複審）&#10;向 PTAB 申請撤銷別人的專利。">IPR</span>/<span class="gloss" data-tip="PGR = Post-Grant Review（授權後複審）&#10;類似 IPR，但只能在專利核發後 9 個月內提，挑戰理由更廣泛。">PGR</span> <span class="gloss" data-tip="裁量不受理（Discretionary Denial）&#10;PTAB 可以自行決定「這個申請我不受理」，不一定要說理由，這個權力該怎麼限制是本次討論核心。">裁量不受理（Discretionary Denial）</span>制定明確規則，涵蓋：(1) 平行訴訟中的 <span class="gloss" data-tip="Fintiv 因素：源自 Apple v. Fintiv 判決&#10;如果你同時在一般法院打官司，PTAB 可能以「效率」為由拒絕受理你的 IPR。IPR 使用者強烈反對這個做法。">Fintiv 因素</span>; (2) 限制 For-profit <span class="gloss" data-tip="非市場競爭者（Non-Market Competitor）&#10;指那些自己不做相關產品、也沒有被告、純粹去挑戰別人專利的公司（例如專業的專利撤銷機構）。">非市場競爭者</span>申請 IPR; (3) "Substantial relationship" / "Compelling merits" / "Substantial overlap" 等門檻定義; (4) 連續/平行申請規則; (5) 和解協議申報要求。
+        <span class="eli5">USPTO 在想：「我們 PTAB 的法庭要不要改規則？比如，只讓有被告的人才能申請 IPR？跟法院同時在打的案子要怎麼處理？」放出來問大家意見。</span>
+        <hr style="margin:10px 0;border:none;border-top:1px solid var(--rule)">
+        <strong><span class="gloss" data-tip="NPRM = 已有具體草案的公告，比 ANPRM 更正式，是最終規則的前一步。">NPRM</span></strong> · 89 Fed. Reg. 28,693 · 2024年4月19日<br>
+        標題：<em>Patent Trial and Appeal Board Rules of Practice for Briefing <span class="gloss" data-tip="裁量拒絕（Discretionary Denial）：PTAB 可自行決定不受理某個 IPR。">Discretionary Denial</span> Issues, and Rules for 325(d) Considerations, Instituting <span class="gloss" data-tip="Parallel and Serial Petitions&#10;Serial = 同一人一直重複提挑戰同一個專利。Parallel = 同一人同時提多份挑戰同一個專利。USPTO 想限制這種行為。">Parallel and Serial Petitions</span>, and Termination Due to Settlement Agreement</em><br>
+        評論截止：2024年6月18日 · Docket: PTO-P-2023-0048<br>
+        <a href="https://www.federalregister.gov/documents/2024/04/19/2024-08362/patent-trial-and-appeal-board-rules-of-practice-for-briefing-discretionary-denial-issues-and-rules" target="_blank" style="color:var(--accent-coral);font-family:monospace;font-size:11px">federalregister.gov → 89 FR 28,693</a>
+      </div>
+    </div>
+
+    <!-- Letter 1: Mylan -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div class="card-num">L01</div>
+        <div class="card-meta">
+          <div class="card-title-row">
+            <span class="card-title">Mylan Pharmaceuticals Inc.（Viatris）</span>
+            <span class="pill pill-teal">Docket PTO-P-2020-0022</span>
+            <span class="pill pill-neg">Offensive</span>
+            <span class="pill pill-amber">製藥 · 學名藥</span>
+          </div>
+          <div class="card-desc">PTOP202000220731 · 19頁 · 2023年6月20日 · 代理律師：William A. Rakoczy (RMMS Legal)</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">核心立場</div>
+            <div class="stance-desc">強烈反對 <span class="gloss" data-tip="ANPRM：規則草案的前身，此時 USPTO 還沒有寫正式草案，先徵詢大家意見。">ANPRM</span> 多項提案，尤其是「限制 <span class="gloss" data-tip="For-profit 非市場競爭者：自己不做相關產品、也沒有被這個專利告、卻去申請 IPR 挑戰別人的公司。USPTO 想讓這類人更難申請 IPR。">For-profit 非市場競爭者</span>申請 <span class="gloss" data-tip="IPR（多方複審）：向 PTAB 法庭申請撤銷別人的專利。">IPR</span>」。Mylan 以<span class="gloss" data-tip="學名藥（Generic Drug）：品牌藥專利到期後，其他廠商仿製的平價版本。Mylan 就是此類大廠。">學名藥</span>廠商身份，已提交逾100件 IPR，主張 IPR 是維護競爭與患者藥品可及性的關鍵工具，<span class="gloss" data-tip="PTAB：USPTO 內部的法庭，專門重新審查別人提出的「這個專利是廢的」申請。">PTAB</span> 的 <span class="gloss" data-tip="Fintiv 法則：「你同時在法院打官司，所以 PTAB 不受理你的 IPR」。Mylan 認為這個標準太任意，害它的 IPR 被擋住。">Fintiv</span>、General Plastic 等裁量拒絕實踐已造成嚴重不確定性。
+              <span class="eli5">Mylan 是做學名藥（便宜仿製藥）的。品牌藥廠常囤專利來擋他們上市。Mylan 靠 IPR 去撤銷那些「壞專利」。USPTO 現在要讓 IPR 更難申請，Mylan 說：「你這樣是在讓壞人繼續囂張，害病患買不到平價藥！」</span>
+            </div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">主要論點大綱</div>
+            <div class="stance-desc">
+              1. <strong>反對 <span class="gloss" data-tip="成文化：把一個法院判決形成的「慣例」寫成正式規則。Mylan 認為 Fintiv 標準本來就不對，把它變成正式規則只會更糟。">Fintiv 法則成文化</span></strong>：現行 <span class="gloss" data-tip="ALJ（行政法法官 Administrative Law Judge）：PTAB 裡負責審案的法官。Mylan 說這些法官用 Fintiv 的方式不一致，非常難以預測。">ALJ</span> 裁量標準不一，應廢除而非編碼化<br>
+              2. <strong>反對 For-profit 限制</strong>：所有「人」（persons）依 <span class="gloss" data-tip="AIA（美國發明法案 2011）：明文規定任何『人』都可以提 IPR，Mylan 說公司當然也是「人」，不能被排除。">AIA</span> 均有申請 IPR 的法定權利，for-profit 限制違反 AIA 授權<br>
+              3. <strong>支持保留 IPR</strong>：Mylan 的 IPR 為患者節省超過 350 億美元年品牌成本競爭<br>
+              4. <strong>反對提高字數限制費用</strong>：增加申請人財務負擔不公平<br>
+              5. <strong>法律論據</strong>：大量引用 <span class="gloss" data-tip="35 U.S.C. § 314(a)：美國專利法中規定 PTAB 受理 IPR 條件的條文。Mylan 引用這條來論證 USPTO 的提案超出了法律授權。">35 U.S.C. § 314(a)</span>, § 315，以及 Fintiv, General Plastic 等判決
+            </div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">Patent_Enforcer = 0</span>
+          <span class="tag">NPE_Defendant = 0（被品牌藥商 patent block）</span>
+          <span class="tag">IPR_Experience 高（100+ IPRs as petitioner）</span>
+          <span class="tag">Patent_Count ~100+</span>
+          <span class="tag">Has_TOC = 0</span>
+          <span class="tag">Legal_Specificity 高</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Letter 2: Dolby 2023 ANPRM -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div class="card-num">L02</div>
+        <div class="card-meta">
+          <div class="card-title-row">
+            <span class="card-title">Dolby Laboratories, Inc.</span>
+            <span class="pill pill-teal">Docket PTO-P-2020-0022</span>
+            <span class="pill pill-neg">Defensive</span>
+            <span class="pill pill-coral">音訊技術 · Patent Licensor</span>
+          </div>
+          <div class="card-desc">PTOP202000220756 · 8頁 · 2023年6月20日 · 回應 ANPRM</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">核心立場</div>
+            <div class="stance-desc">支持 USPTO 提案限制 <span class="gloss" data-tip="For-profit 非市場競爭者：自己不做相關產品的公司去挑戰別人的專利。Dolby 認為這些人只是想讓它的授權費變便宜，是一種騷擾。">For-profit 非市場競爭者</span>申請 IPR。Dolby 持有逾 2,500 件美國專利，主要收入來自<span class="gloss" data-tip="授權（Licensing）：把你的專利「租」給別人用，對方付你一筆費用。Dolby 幾乎靠這個維生。">授權</span>，視 IPR 被非直接競爭者惡意使用為對其授權商業模式的威脅，是本語料庫最典型的 <span class="gloss" data-tip="Defensive（防禦性）：公司寫信的目的是保住現有的收益不被新規則侵蝕。">Defensive</span> / <span class="gloss" data-tip="Patent Monetizer：主要靠「收專利授權費」賺錢的公司，不是靠賣產品。Dolby 是典型例子。">Patent Monetizer</span> 案例。
+              <span class="eli5">Dolby 靠「把它的音訊技術授權給其他廠商」賺錢。如果有人用 IPR 把 Dolby 的專利撤掉，Dolby 就沒有收入了。所以 Dolby 支持限制「跟這個專利沒關係的人」來申請 IPR。</span>
+            </div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">主要論點大綱</div>
+            <div class="stance-desc">
+              1. <strong>支持拒絕 For-profit 非被訴者的 IPR 申請</strong>：無<span class="gloss" data-tip="侵權威脅（Infringement Threat）：你有被對方告的合理風險，才算是有「立場」去申請 IPR。如果你跟這個專利毫無關係，Dolby 認為你就不該有資格去挑戰它。">侵權威脅</span>、不從事相關領域者不應有 IPR <span class="gloss" data-tip="Standing（訴訟資格）：在法律上，你要有一定的利害關係才有資格提出申請或訴訟。Dolby 認為非相關者沒有 standing 申請 IPR。">standing</span><br>
+              2. <strong>支持「<span class="gloss" data-tip="Substantial Relationship（實質關係）：如果某公司跟被告有緊密的業務關係（例如被授權商），那它可以例外申請 IPR。這是 Dolby 同意的一個折衷方案。">Substantial Relationship</span>」例外</strong>：確保合法業務夥伴仍有救濟管道<br>
+              3. <strong>反對 <span class="gloss" data-tip="Compelling Merits（強力論點例外）：即使申請人本來應被拒絕，但如果它的技術論點非常強力，仍可被受理。Dolby 認為這個例外太寬鬆，會讓規則形同虛設。">Compelling Merits 例外</span></strong>：認為例外過寬，有損規則確定性<br>
+              4. <strong>支持 <span class="gloss" data-tip="Covenant Not to Sue（不告承諾）：Dolby 願意承諾「我不會去告你」，那你就沒有立場來 IPR 我的專利了。">Covenant Not to Sue</span> 作為拒絕依據</strong>：若專利所有人承諾不訴，應可終止程序<br>
+              5. <strong>支持 Multiple Petitioners 的 <span class="gloss" data-tip="RPI（Real Party in Interest，真正利益當事人）和 Privy（利害關係人）：如果有多家公司聯合申請 IPR，要揭露每個幕後的真正利益相關者，防止規避 estoppel（禁翻案規定）。">RPI/Privy 揭露</span></strong>：避免集體申請規避 <span class="gloss" data-tip="Estoppel（禁反言）：你在 PTAB 已經用過某個論點（或本來可以用），之後就不能再在法院用同樣論點。">estoppel</span>
+            </div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">Patent_Enforcer = 1（授權為主要商業模式）</span>
+          <span class="tag">NPE_Defendant = 0</span>
+          <span class="tag">IPR_Experience = 12 as petitioner + 3 as patent owner</span>
+          <span class="tag">Patent_Count = 2,500+</span>
+          <span class="tag">Has_TOC = 0</span>
+          <span class="tag">Stance = Defensive = 1（框架 02 典型）</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Letter 3: Apple 2023 ANPRM -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div class="card-num">L03</div>
+        <div class="card-meta">
+          <div class="card-title-row">
+            <span class="card-title">Apple Inc.</span>
+            <span class="pill pill-teal">Docket PTO-P-2020-0022</span>
+            <span class="pill pill-neu">Offensive</span>
+            <span class="pill pill-blue">半導體 / 消費電子</span>
+          </div>
+          <div class="card-desc">PTOP202000220800 · 23頁 · 2023年6月20日 · 含完整 Table of Contents · 回應 ANPRM</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">核心立場</div>
+            <div class="stance-desc">強烈反對幾乎所有 ANPRM 提案，尤其反對限制 IPR 申請者範圍。Apple 是史上最常被 <span class="gloss" data-tip="NPE（Non-Practicing Entity，非實施主體）：俗稱專利流氓。囤積專利、不做產品、專靠告人索賠維生的公司。">NPE</span> 訴訟的被告之一，視 IPR 為清除無效專利的核心工具。是本語料庫最典型的 <span class="gloss" data-tip="Offensive（進攻性）：公司寫信是為了維持甚至強化它挑戰別人專利的能力，而非保護自己現有收益。">Offensive</span> / NPE Victim 案例。信件結構最完整，法律引用最密集，<span class="gloss" data-tip="Sophistication Score（精緻度評分）：衡量一封信的「品質」——論點是否有根據、是否展示法律專業知識、是否條理清晰。Apple 這封分數最高。">sophistication score</span> 最高。
+              <span class="eli5">Apple 每年都被幾十家「專利流氓」告。IPR 是它最好的反擊武器，可以便宜快速地撤銷那些壞專利。USPTO 現在想限制 IPR，Apple 非常生氣，寫了一封 23 頁、引用大量法律的超詳細信說：「這些提案幾乎全部違反 AIA 的精神，全部都不應該通過！」</span>
+            </div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">主要論點大綱（含 TOC 結構）</div>
+            <div class="stance-desc">
+              I. <strong>AIA 背景</strong>：IPR 成功清除超廣專利主張，Apple 有強烈利益維護公平專利體系<br>
+              II-A. <strong>反對「Substantial Relationship」測試</strong>：定義過廣，違反 AIA<br>
+              II-B. <strong>反對各項裁量拒絕規則</strong>：§§ 314(a), 324(a), 325(d) 均不應擴大<br>
+              &nbsp;&nbsp;&nbsp;1. 反對以平行訴訟為由拒絕（Fintiv）<br>
+              &nbsp;&nbsp;&nbsp;2. 反對以前次有效性裁定為由拒絕<br>
+              &nbsp;&nbsp;&nbsp;3. 反對拒絕 For-profit 申請（違反 AIA 的 "persons" 授權）<br>
+              &nbsp;&nbsp;&nbsp;4. 反對拒絕小企業申請<br>
+              II-C. 反對預先和解申報要求<br>
+              III. <strong>支持採納的提案</strong>：增加 word count 費用方案 / 分開 briefing 裁量問題
+            </div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">Patent_Enforcer = 0（主要是 IPR 申請者）</span>
+          <span class="tag">NPE_Defendant = 1（明確提及 NPE 問題）</span>
+          <span class="tag">Has_TOC = 1</span>
+          <span class="tag">Legal_Specificity 極高（大量 §§ 引用 + 案例法）</span>
+          <span class="tag">Sophistication 最高（S1 框架 Offensive 典型）</span>
+          <span class="tag">Employee_Count = 90,000+ (US)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Docket 2: PTO-P-2023-0048 (NPRM) -->
+    <div style="margin-bottom:8px;margin-top:32px">
+      <span class="label-mono" style="color:var(--accent-teal)">Docket 2 — PTO-P-2023-0048</span>
+    </div>
+    <div class="note-card" style="margin-bottom:20px;background:var(--pill-teal-bg);border-color:var(--accent-teal)20">
+      <div class="note-title"><span class="note-icon" style="background:var(--pill-teal-bg);color:var(--accent-teal)">USPTO</span>原始發布：NPRM（PTAB 裁量 Briefing + Serial/Parallel Petitions）</div>
+      <div class="note-body">
+        <strong>NPRM</strong> · 89 Fed. Reg. 28,693 · 2024年4月19日<br>
+        標題：<em>Patent Trial and Appeal Board Rules of Practice for Briefing Discretionary Denial Issues, and Rules for 325(d) Considerations, Instituting Parallel and Serial Petitions, and Termination Due to Settlement Agreement</em><br>
+        評論截止：2024年6月18日<br>
+        <a href="https://www.regulations.gov/docket/PTO-P-2023-0048" target="_blank" style="color:var(--accent-teal);font-family:monospace;font-size:11px">regulations.gov/docket/PTO-P-2023-0048</a>
+        <hr style="margin:10px 0;border:none;border-top:1px solid var(--rule)">
+        <strong>核心議題：</strong>將 ANPRM 後的公眾意見轉化為具體規則草案，聚焦於：(1) 裁量拒絕議題的獨立 briefing 程序; (2) § 325(d) 「同樣/實質相同論點」的操作標準; (3) Serial Petition（連續申請同一專利）的定義與拒絕規則; (4) Parallel Petition（同一申請者對同一專利同時提多份申請）規則; (5) 和解終止程序統一。此 NPRM 為 PTO-P-2020-0022 docket 的延伸，但使用新的 docket 號碼。
+      </div>
+    </div>
+
+    <!-- Letter 4: Dolby 2024 NPRM -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div class="card-num">L04</div>
+        <div class="card-meta">
+          <div class="card-title-row">
+            <span class="card-title">Dolby Laboratories, Inc.（回應 NPRM）</span>
+            <span class="pill pill-teal">Docket PTO-P-2023-0048</span>
+            <span class="pill pill-neg">Defensive</span>
+            <span class="pill pill-coral">音訊技術 · Patent Licensor</span>
+          </div>
+          <div class="card-desc">PTOP202300480078 · 3頁 · 回應 2024年4月 NPRM · 與 L02 為同一公司的跨 docket 追蹤評論</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">核心立場</div>
+            <div class="stance-desc">本信件為 Dolby 在 ANPRM（L02）之後針對 <span class="gloss" data-tip="NPRM（規則草案公告）：比 ANPRM 更正式的草案。USPTO 已寫好具體文字，放出來讓大家評論。">NPRM</span> 的跟進評論。Dolby 表示對多數 NPRM 議題不表態，但針對「<span class="gloss" data-tip="Serial Petition（連續申請）：同一個人對同一個專利，前後提多次 IPR 申請。USPTO 想限制這種行為。">Serial Petition</span>」定義提出具體問題，指出 NPRM 定義與 PTAB 前例 <span class="gloss" data-tip="MemoryWeb 前例：PTAB 的一個判決，說某種情況下就算申請人有同樣的 RPI，也不算是 serial petition。Dolby 認為 NPRM 的定義跟這個前例有衝突，需要 USPTO 說清楚。">MemoryWeb</span> 存在衝突，可能造成 <span class="gloss" data-tip="RPI（Real Party in Interest）認定困難：判斷誰是「真正的利益當事人」有時很複雜，特別是在申請前的有限時間內更難確認。">RPI 認定</span>困難。
+              <span class="eli5">Dolby 又來寫信了（這次針對正式草案）。它主要關心一個技術問題：「連續申請」的定義可能跟 PTAB 以前的一個判決有矛盾，要求 USPTO 說清楚。</span>
+            </div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">主要論點大綱</div>
+            <div class="stance-desc">
+              1. <strong>呼籲 USPTO 參考 L02 評論</strong>：繼續推進 For-profit 非市場競爭者限制的規則<br>
+              2. <strong>Serial Petition 定義問題</strong>：NPRM 定義涵蓋 RPI/Privy 共通性，但與 MemoryWeb 前例矛盾<br>
+              3. <strong>要求澄清</strong>：最終規則應明確 RPI 共通性 + 相同 claim 挑戰 = serial petition<br>
+              4. <strong>執行可行性問題</strong>：Institution 前的有限時間難以確認 RPI 身份
+            </div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">跨 docket 追蹤（與 L02 為同企業）</span>
+          <span class="tag">Letter_Length 短（3頁）</span>
+          <span class="tag">Issue_Specificity 高（聚焦 1 個具體 Serial Petition 問題）</span>
+          <span class="tag">Ambiguity 低（立場一致）</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Docket 3: PTO-P-2024-0003 Terminal Disclaimer -->
+    <div style="margin-bottom:8px;margin-top:32px">
+      <span class="label-mono" style="color:var(--accent-amber)">Docket 3 — PTO-P-2024-0003</span>
+    </div>
+    <div class="note-card" style="margin-bottom:20px;background:var(--pill-amber-bg);border-color:var(--accent-amber)20">
+      <div class="note-title"><span class="note-icon" style="background:var(--pill-amber-bg);color:var(--accent-amber)">USPTO</span>原始發布：NPRM — Terminal Disclaimer Practice（已撤回）</div>
+      <div class="note-body">
+        <strong>NPRM</strong> · 89 Fed. Reg. 40,439 · 2024年5月10日<br>
+        標題：<em>Terminal Disclaimer Practice To Obviate Nonstatutory Double Patenting</em><br>
+        評論截止：2024年7月9日 · 收到逾 <strong>300 則評論</strong><br>
+        <a href="https://www.regulations.gov/docket/PTO-P-2024-0003" target="_blank" style="color:var(--accent-amber);font-family:monospace;font-size:11px">regulations.gov/docket/PTO-P-2024-0003</a>
+        <hr style="margin:10px 0;border:none;border-top:1px solid var(--rule)">
+        <strong>核心議題：</strong>擬修改 <span class="gloss" data-tip="37 C.F.R. § 1.321：美國聯邦法規中關於 Terminal Disclaimer（終期聲明放棄）的條文。">37 C.F.R. § 1.321</span>，要求提交 <span class="gloss" data-tip="Terminal Disclaimer（終期聲明放棄）：一份文件，讓兩個相似的專利「生命期」綑綁在一起同時到期。本來用來避免公司一直用微小變化重複申請、延長保護。">Terminal Disclaimer</span> 以克服 <span class="gloss" data-tip="Obviousness-Type Double Patenting（OTDP，顯而易見型雙重專利）：你的兩個專利差別很小，一個對另一個來說「顯而易見」，法院認為這樣不應該擁有雙重保護。">Obviousness-Type Double Patenting (OTDP)</span> 拒絕時，申請人必須同意：若與其 terminally disclaimed 相連的任何專利遭法院判定無效，則本專利同樣不得執行。目的是打擊製藥業的「<span class="gloss" data-tip="Patent Thicket（專利灌木叢）：大公司圍繞一個核心技術，申請大量些微不同的專利，像一叢灌木一樣把競爭對手擋在外面，讓他們無法進入市場。">Patent Thicket</span>」問題。<br>
+        <strong style="color:var(--accent-coral)">⚑ 已於 2024年12月4日撤回（資源不足 + 廣泛反對）</strong>
+      </div>
+    </div>
+
+    <!-- Letter 5: Inari Agriculture -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div class="card-num">L05</div>
+        <div class="card-meta">
+          <div class="card-title-row">
+            <span class="card-title">Inari Agriculture, Inc.</span>
+            <span class="pill pill-amber">Docket PTO-P-2024-0003</span>
+            <span class="pill pill-pos">支持（Offensive）</span>
+            <span class="pill pill-teal">農業生技 · 基因編輯</span>
+          </div>
+          <div class="card-desc">PTOP202400030283 · 2頁 · 2024年7月 · Cambridge, MA</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">核心立場</div>
+            <div class="stance-desc">強力支持 NPRM。Inari 是<span class="gloss" data-tip="基因編輯（Gene Editing）：用 CRISPR 等工具直接修改植物的 DNA，讓農作物產量更高、更抗旱。Inari 用這個技術幫農民改良種子。">農業基因編輯</span>新創，長期面對種業龍頭的 <span class="gloss" data-tip="Patent Thicket（專利灌木叢）：種業大公司囤了一大堆相似的專利，讓 Inari 無法開發新種子，因為任何一點改進都可能碰到某個專利。">Patent Thicket</span> 攻擊。直接指出現行制度讓農民（和消費者）付出了慘重的代價，呼籲 USPTO 盡快定案。代表「<span class="gloss" data-tip="Entrant vs Incumbent（進入者 vs 現有者）：Inari 是想進入市場的新創（Entrant），種業龍頭是現有霸主（Incumbent）。新規則讓 Entrant 更容易挑戰霸主的 Patent Thicket。">Entrant vs Incumbent</span>」框架中的進入者視角，是少數正面支持該提案的企業之一。
+              <span class="eli5">Inari 想開發更好的農作物種子，但種業大公司用大量相似的專利把市場圍住，讓 Inari 無法做研究。USPTO 想讓這些「專利堆疊」更難維持，Inari 超開心，說：「快點通過！農民正在等！」</span>
+            </div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">主要論點大綱</div>
+            <div class="stance-desc">
+              1. <strong>Patent Thicket 問題嚴重</strong>：種業現行 <span class="gloss" data-tip="PTA（Patent Term Adjustment，專利期限調整）：如果 USPTO 審查太慢，會補給申請人一些額外的專利期限。Inari 說種業大公司故意拖延審查來拿 PTA，然後再申請相似的後續專利，讓保護期無限延長。">PTA</span> 系統被濫用，製造大量重複性專利保護無實質創新的「發明」<br>
+              2. <strong>NPRM 合法性</strong>：Terminal Disclaimer 是程序規則（非實體法），USPTO 有權制定<br>
+              3. <strong>成本只由惡意行為人承擔</strong>：守法者不受影響，反對意見中的「成本增加」論點站不住腳<br>
+              4. <strong>支持速度</strong>：鼓勵 USPTO 盡速定案，與 <span class="gloss" data-tip="USDA（美國農業部）：跟 USPTO 合作共同解決農業專利濫用問題。">USDA</span> 合作打擊農業專利濫用
+            </div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">Entrant（框架 05）= 1</span>
+          <span class="tag">NPE Victim 性質（被種業巨頭 thicket block）</span>
+          <span class="tag">Letter_Tone = 5（強烈支持，罕見）</span>
+          <span class="tag">有具體 PGR 實務數據</span>
+          <span class="tag">Has_TOC = 0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Letter 6: Ginkgo Bioworks -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div class="card-num">L06</div>
+        <div class="card-meta">
+          <div class="card-title-row">
+            <span class="card-title">Ginkgo Bioworks Holdings, Inc.</span>
+            <span class="pill pill-amber">Docket PTO-P-2024-0003</span>
+            <span class="pill pill-neg">反對（Defensive/Mixed）</span>
+            <span class="pill pill-blue">合成生物學 · 細胞工程</span>
+          </div>
+          <div class="card-desc">PTOP202400030308 · 15頁 · 2024年7月9日 · NYSE上市 · Boston, MA</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">核心立場</div>
+            <div class="stance-desc">反對 NPRM，但理由與製藥業龍頭不同：Ginkgo 是<span class="gloss" data-tip="平台公司（Platform Company）：Ginkgo 不是做單一產品，而是提供一個「生物工程平台」，讓各種客戶（食品業、農業、醫藥等）都可以來使用 Ginkgo 的技術做研究開發。">平台公司</span>，核心業務需整合多方專利技術進行協作研究。現行 Terminal Disclaimer 規則已對協作創新造成阻礙，NPRM 再增條件會讓合作研究更難進行。同時主張 NPRM 超越 USPTO 法定授權（<span class="gloss" data-tip="Ultra vires（拉丁文：超越授權）：機關做了它法律上沒有授權做的事，因此這個行為無效。Ginkgo 說 USPTO 沒有管「專利怎麼執行」的授權，所以這個規則是違法的。">ultra vires</span>），屬違法行政規則。
+              <span class="eli5">Ginkgo 是一家科技公司，它需要把很多不同公司的專利技術「拼在一起」來做研究。Terminal Disclaimer 規則讓這件事變得很麻煩（因為合作夥伴的專利被綁在一起），現在還要加更多條件？Ginkgo 說：「不行！而且你們 USPTO 根本沒有資格管這件事，這個規則是違法的！」</span>
+            </div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">主要論點大綱</div>
+            <div class="stance-desc">
+              I. <strong>NPRM 總結</strong>：規則已阻礙協作創新，不應再加碼<br>
+              II. <strong>Ultra Vires（越權）</strong>：USPTO 無執行授權，NPRM 試圖管制<span class="gloss" data-tip="專利執行（Patent Enforcement）：就是「去告人侵權」這件事。USPTO 的工作是「審查和核發專利」，而不是管「你怎麼用那個專利去告人」，Ginkgo 說 NPRM 管到後者了，越權。">專利執行</span>行為超出其職權範圍；違反 <span class="gloss" data-tip="35 U.S.C. § 253(b)：美國專利法中賦予申請人「自願放棄部分專利期限」的法定權利條文。Ginkgo 說 USPTO 不能在這個條文之外附加新的條件。">35 U.S.C. § 253(b)</span> 申請人對 terminal disclaimer 的法定權利<br>
+              III. <strong>更好的替代方案</strong>：應由法院和 <span class="gloss" data-tip="Congress（美國國會）：只有國會才能立法改變這件事，USPTO 只是行政機關，不應自行「立法」。">Congress</span> 處理多件專利執行風險，而非 USPTO；建議接受符合最低法定要求的所有 terminal disclaimers，不附加非法定條件<br>
+              IV. <strong>Ginkgo 業務背景</strong>：系統整合者需組合多方專利技術，現行規則已造成實際阻礙
+            </div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">Entrant-type（新興生技平台）</span>
+          <span class="tag">反對理由：協作創新障礙（非傳統 incumbent 防禦）</span>
+          <span class="tag">Legal_Specificity 高（Ultra vires 法律論證）</span>
+          <span class="tag">Has_TOC = 1（含 Executive Summary）</span>
+          <span class="tag">Ambiguity 中（立場與其他反對者同向但理由不同）</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Docket 4: PTO-P-2025-0025 PTAB Revision -->
+    <div style="margin-bottom:8px;margin-top:32px">
+      <span class="label-mono" style="color:var(--accent-purple)">Docket 4 — PTO-P-2025-0025</span>
+    </div>
+    <div class="note-card" style="margin-bottom:20px;background:var(--pill-purple-bg);border-color:var(--accent-purple)20">
+      <div class="note-title"><span class="note-icon" style="background:var(--pill-purple-bg);color:var(--accent-purple)">USPTO</span>原始發布：NPRM — Revision to PTAB Rules of Practice（2025）</div>
+      <div class="note-body">
+        <strong>NPRM</strong> · 90 Fed. Reg. 48,335 · 2025年10月17日<br>
+        標題：<em>Revision to Rules of Practice Before the Patent Trial and Appeal Board</em><br>
+        評論截止：2025年12月2日（延長）· 收到逾 <strong>11,000 則評論</strong><br>
+        <a href="https://www.regulations.gov/docket/PTO-P-2025-0025" target="_blank" style="color:var(--accent-purple);font-family:monospace;font-size:11px">regulations.gov/docket/PTO-P-2025-0025</a>
+        <hr style="margin:10px 0;border:none;border-top:1px solid var(--rule)">
+        <strong>核心議題（Trump 政府 · Director Squires）：</strong>提議在 <span class="gloss" data-tip="37 C.F.R. § 42.108：聯邦法規中規定 PTAB 是否受理 IPR 申請的條文。這次要在這條文裡加入三項新的強制拒絕條款。">37 C.F.R. § 42.108</span> 中新增三項強制性 IPR 拒絕條款：<br>
+        (d) <strong><span class="gloss" data-tip="Required Stipulation（必要聲明放棄）：你要提 IPR，你必須先簽一份文件，承諾如果 IPR 被受理，你在所有其他地方（法院、ITC）都不能再用同樣的理由（先前技術）挑戰這個專利。這被批評為「要你在打牌前先棄牌」。">Required Stipulation</span></strong>：申請人必須事先放棄在任何其他程序（地方法院、<span class="gloss" data-tip="ITC（International Trade Commission，國際貿易委員會）：一個可以阻止侵權商品進口的美國政府機關，也可以處理專利糾紛。">ITC</span>）中以 §§ <span class="gloss" data-tip="35 U.S.C. §§ 102/103：§102 是「新穎性」（你的發明必須是全新的），§103 是「非顯而易見性」（不能只是顯而易見的小改動）。這兩條是最常用來挑戰專利無效的理由。">102/103</span> 主張無效的權利<br>
+        (e) <strong><span class="gloss" data-tip="Prior Validity Determination Bar（先前有效性裁定障礙）：如果這個專利在法院、ITC 或 PTAB 已經被認定是有效的，那就不能再提 IPR 了。批評者說，這讓「專利流氓」可以先找小公司打官司，得到一個有利結果後，再用這個結果擋住後來更大的挑戰者。">Prior Validity Determination Bar</span></strong>：若相關<span class="gloss" data-tip="請求項（Claim）：專利文件中最重要的部分，精確定義「這個專利保護的範圍在哪裡」。每個專利通常有很多條請求項。">請求項</span>或其附屬的獨立請求項已在法院/ITC/PTAB 被認定有效，則禁止 IPR<br>
+        (f) <strong><span class="gloss" data-tip="Parallel Proceeding Bar（Fintiv 成文化）：把 Fintiv 法則直接寫成法規。如果你在法院的訴訟可能先於 PTAB 得出有效性裁定，PTAB 就必須拒絕受理你的 IPR。">Parallel Proceeding Bar（Fintiv 成文化）</span></strong>：若平行訴訟可能先於 PTAB 作出有效性裁定，則禁止 IPR<br>
+        背景：此 NPRM 被評論者描述為「最具顛覆性的 IPR 規則提案」，連 <span class="gloss" data-tip="AIA 兩位共同作者：Patrick Leahy（參議員）和 Lamar Smith（眾議員）共同起草了 AIA。諷刺的是，這次他們對 NPRM 的看法完全相反——Leahy 反對，Smith 支持。">AIA 兩位共同作者（Leahy vs. Lamar Smith）</span>也分別站在正反對立兩側。
+      </div>
+    </div>
+
+    <!-- Letter 7: Altria -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div class="card-num">L07</div>
+        <div class="card-meta">
+          <div class="card-title-row">
+            <span class="card-title">Altria Client Services LLC（代表 Altria Group）</span>
+            <span class="pill pill-purple">Docket PTO-P-2025-0025</span>
+            <span class="pill pill-mixed">Mixed（支持目標，反對條款）</span>
+            <span class="pill pill-gray">菸草 · 消費品</span>
+          </div>
+          <div class="card-desc">PTOP202500251900 · 6頁 · 2025年12月2日 · 代理人：Ian J. Samuel, Senior Assistant GC</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">核心立場</div>
+            <div class="stance-desc">支持 PTO 降低重複 IPR 挑戰、促進效率的目標，但反對多項具體條款，認為已超越 AIA 法定授權且違反 <span class="gloss" data-tip="Due Process（正當程序）：美國憲法保障，政府不能在沒有公正程序的情況下剝奪你的權利。Altria 說 USPTO 的規則讓還沒有機會陳述意見的第三方被剝奪了申請 IPR 的權利，違反了這個原則。">due process</span>。屬於典型的 <span class="gloss" data-tip="Mixed（混合立場）：對某些提案支持，對某些提案反對。不是純粹的贊成或反對。">Mixed</span> 立場：對政策方向有條件認同，但對規則設計強烈批評。
+              <span class="eli5">Altria（菸草公司）說：「我支持你們想減少重複挑戰的目標，但這幾條規則寫得太超過了，違反了法律規定，請改寫。」</span>
+            </div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">主要論點大綱</div>
+            <div class="stance-desc">
+              I. <strong>§ 42.108(d) 過廣違法</strong>：強制 stipulation 擴大了 <span class="gloss" data-tip="§ 315(e)（AIA 的 Estoppel 條款）：這條文明確規定，只有在 IPR 最終書面決定後，才產生禁止翻案效果，而且只針對你在 IPR 中「提出或合理應可提出」的論點。USPTO 的新規比這條文嚴得多。">§ 315(e)</span> 法定 estoppel 的範圍，至少在四個維度上違反 AIA：適用對象範圍、"<span class="gloss" data-tip="reasonably could have raised（合理應可提出）：法律規定 estoppel 只適用於你「合理上本來可以在 IPR 中提出」的論點。USPTO 的新規更嚴，連你不知道的論點也要一起放棄。">reasonably could have raised</span>"、claim-by-claim 標準、觸發時點<br>
+              II. <strong>§ 42.108(e) 違反 due process</strong>：將 <span class="gloss" data-tip="§ 325(d)（裁量性考量）：這條文讓局長可以『考量』拒絕 IPR 申請，但 USPTO 新規直接把它變成『必須拒絕』，Altria 說這是把裁量權變成強制規定，超出法律授權。">§ 325(d)</span> 的裁量標準轉為強制性拒絕，侵犯未參與前案訴訟的申請人的程序正當性<br>
+              III. <strong>關於 § 42.108(f)</strong>：反對以「可能先」於 PTAB 作出裁定的平行訴訟為由強制拒絕
+            </div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">Ambiguity_Score ≈ 0.4（支持目標，反對手段）</span>
+          <span class="tag">Legal_Specificity 高（逐條 statutory analysis）</span>
+          <span class="tag">Opposition_Strength = 4</span>
+          <span class="tag">NPE 相關性：菸草業有被 NPE 訴訟的歷史</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Letter 8: Intel -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div class="card-num">L08</div>
+        <div class="card-meta">
+          <div class="card-title-row">
+            <span class="card-title">Intel Corporation</span>
+            <span class="pill pill-purple">Docket PTO-P-2025-0025</span>
+            <span class="pill pill-neg">強烈反對（Offensive）</span>
+            <span class="pill pill-blue">半導體 · 製造業</span>
+          </div>
+          <div class="card-desc">PTOP202500252067 · 17頁 · 2025年12月2日 · 含 Executive Summary</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">核心立場</div>
+            <div class="stance-desc">強烈反對三項新規，要求 USPTO 撤回 §§ 42.108(d)-(f)。Intel 是全球最大<span class="gloss" data-tip="半導體（Semiconductor）：就是晶片。Intel 做的是電腦和伺服器用的處理器晶片，是製造業中技術密集度最高的產業之一。">半導體</span>公司之一，持有 6 萬件以上專利，但也是 IPR 制度的重度使用者，靠 IPR 避免 10 億美元以上的損害賠償。2025 年已有 5 件訴訟受到<span class="gloss" data-tip="裁量拒絕（Discretionary Denial）：PTAB 可以自行決定不受理某個 IPR，即使申請人符合所有條件。Intel 的 5 件訴訟被這樣擋住了。">裁量拒絕</span>影響。是本語料庫最具代表性的 Offensive / <span class="gloss" data-tip="NPE Victim：被「專利流氓」告的公司。Intel 常被 PAE（專利主張實體）用買來的專利告，靠 IPR 反擊撤銷那些壞專利。">NPE Victim</span> 大型科技公司。
+              <span class="eli5">Intel 一方面擁有超過 6 萬個專利，另一方面也常常被「專利流氓」用其他專利告。IPR 是 Intel 反擊的最重要工具，靠它避免了超過 10 億美元的賠償。USPTO 現在想讓 IPR 更難申請，Intel 說：「你這樣是讓專利流氓更囂張！請撤回這個草案！」</span>
+            </div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">主要論點大綱（含 Executive Summary）</div>
+            <div class="stance-desc">
+              I. <strong>Executive Summary</strong>：三項規則將顛覆 <span class="gloss" data-tip="AIA（美國發明法案）：2011 年創設 IPR 制度，設計上是讓 IPR 和法院訴訟可以並行。新規則改變了這個設計。">AIA</span> 設計，強迫爭端進入更慢、更貴、更不可靠的訴訟<br>
+              II-A. <strong>§ 42.108(d) 問題</strong>：強制放棄所有 §§ 102/103 防禦，含 PTAB 無法處理的 <span class="gloss" data-tip="on-sale bar（在售障礙）/ prior use（先前使用）：這兩個是只能在法院主張的無效理由（不能在 PTAB 用）。新規要你連這些理由也一起放棄，Intel 說這嚴重不合理。">on-sale / prior use</span> 事由；"may not be maintained" 措辭製造後制度不確定性<br>
+              II-B. <strong>§ 42.108(e) 問題</strong>：讓 <span class="gloss" data-tip="PAE（Patent Assertion Entity，專利主張實體）：就是專利流氓。它們可以先找小公司打官司、得到有利判決，然後用那個判決擋住大公司後來提的 IPR。">PAE</span> 可先對小公司取得窄判決再屏蔽後來的 IPR；未參與前案的第三人被波及<br>
+              II-C. <strong>§ 42.108(f) 問題</strong>：法院行事曆外的變數不在 petitioner 控制內，強制拒絕將鼓勵 <span class="gloss" data-tip="Gamesmanship（策略操弄）：指利用程序規則漏洞來佔便宜，而非追求實質公平。例如專利持有人刻意選快審的法院，讓 PTAB 的 Fintiv 觸發，擋住 IPR 受理。">gamesmanship</span><br>
+              III. 替代建議：維持現有裁量機制，不應轉為強制性拒絕
+            </div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">Patent_Enforcer = 0（但 Patent_Count = 60,000+）</span>
+          <span class="tag">NPE_Defendant = 1（明確提及 PAE 問題）</span>
+          <span class="tag">IPR_Experience 極高（13年重度使用者）</span>
+          <span class="tag">Has_TOC = 1（Executive Summary）</span>
+          <span class="tag">Legal_Specificity 極高</span>
+          <span class="tag">R&D_Intensity 高（5年 $790億 R&D）</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Docket 5: Trademark -->
+    <div style="margin-bottom:8px;margin-top:32px">
+      <span class="label-mono" style="color:var(--accent-gray)">Docket 5 — PTO-T-2018-0021（Trademark）</span>
+    </div>
+    <div class="note-card" style="margin-bottom:20px;background:var(--pill-gray-bg);border-color:var(--accent-gray)20">
+      <div class="note-title"><span class="note-icon">USPTO</span>原始發布：RFC — 外國商標申請人委任美國執照律師</div>
+      <div class="note-body">
+        <strong>Request for Comments</strong> · 2018–2019年間<br>
+        標題：<em>Requirement of U.S. Licensed Attorney for Foreign Trademark Applicants and Registrants</em><br>
+        <a href="https://www.regulations.gov/docket/PTO-T-2018-0021" target="_blank" style="color:var(--accent-gray);font-family:monospace;font-size:11px">regulations.gov/docket/PTO-T-2018-0021</a><br>
+        <strong>核心議題：</strong>是否應強制要求非美國商標申請人和被授權人委任美國持照律師作為 USPTO 的唯一代理人，以解決外國「壞行為者」申請假造的商標使用證據（digitally altered specimens）問題。
+      </div>
+    </div>
+
+    <!-- Letter 9: Target -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div class="card-num">L09</div>
+        <div class="card-meta">
+          <div class="card-title-row">
+            <span class="card-title">Target Corporation</span>
+            <span class="pill pill-gray">Docket PTO-T-2018-0021</span>
+            <span class="pill pill-pos">支持</span>
+            <span class="pill pill-blue">零售 · 商標大量申請者</span>
+          </div>
+          <div class="card-desc">PTOT201800210032 · 3頁 · 2019年3月18日 · 圖像文件（OCR必要）· Minneapolis, MN</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">核心立場</div>
+            <div class="stance-desc">強烈支持強制外國申請人委任美國<span class="gloss" data-tip="持照律師（Licensed Attorney）：在美國通過律師考試、獲得執照的律師。USPTO 提案要求所有外國申請人必須透過這樣的律師提出商標申請，而不是自己直接申請。">持照律師</span>。Target 是美國最大<span class="gloss" data-tip="商標（Trademark）：保護品牌名稱、Logo、口號等識別標誌的智慧財產權。Target 每年要申請大量商標來保護它的品牌。">商標</span>申請者之一（2018年排名第一），在超過40國申請商標，深刻了解本地律師制度的重要性。Target 自身在商標可用性調查中頻繁發現外國申請人的<span class="gloss" data-tip="假造使用證據（Digitally Altered Specimens）：商標申請需要提供「實際使用」的證明（叫 specimen）。有些外國申請人提供的是 Photoshop 合成的假圖，假裝他們的品牌已經在美國市場使用。">假造使用證據</span>，支持 USPTO 加強管制以保護現有商標體系誠信。
+              <span class="eli5">Target 是大型零售商，每年申請超多商標保護自己的品牌。它發現很多中國或其他外國公司，提交假造的商標使用證明（Photoshop 假圖），搶先在美國登記商標，然後可能去勒索真正的商標使用者。Target 支持 USPTO 要求外國申請人必須透過美國律師申請，這樣比較容易追責。</span>
+            </div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">主要論點大綱</div>
+            <div class="stance-desc">
+              1. <strong>支持美國律師要求</strong>：與全球40+國的本地律師制度接軌，維護美國商標體系完整性<br>
+              2. <strong>外國假造申請問題</strong>：Target 調查中發現大量 digitally altered specimens 和幽靈申請人，指出 USPTO 缺乏對境外申請人的追訴手段<br>
+              3. <strong>程序建議</strong>：應在委任律師前暫停審查外國申請，給申請人30天回應，逾期拒絕<br>
+              4. <strong>持續監控建議</strong>：鼓勵 USPTO 積極清除可疑的待審及已核准商標
+            </div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">Trademark docket（非 Patent）</span>
+          <span class="tag">Tech_User 性質（商標大量使用者，非創造者）</span>
+          <span class="tag">Letter_Tone = 4–5（強力支持）</span>
+          <span class="tag">Has_TOC = 0</span>
+          <span class="tag">Issue_Specificity 中（回應特定問題：是否繼續審查、如何執行）</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SSRN Reference Paper -->
+    <div style="margin-bottom:8px;margin-top:32px">
+      <span class="label-mono" style="color:var(--accent-blue)">學術參考文獻</span>
+    </div>
+    <div class="card" style="margin-bottom:14px;border-color:var(--accent-blue)30">
+      <div class="card-header">
+        <div class="card-num">REF</div>
+        <div class="card-meta">
+          <div class="card-title-row">
+            <span class="card-title">Du, Huang, Ye & Ye (2025)</span>
+            <span class="pill pill-blue">SEC Comment Letters 研究</span>
+            <span class="pill pill-gray">SSRN 5191573 · ECGI WP 1063/2025</span>
+          </div>
+          <div class="card-desc">"Comments that Count: Corporate Influence in SEC Governance Rulemaking" · ssrn5191573.pdf · 71頁</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">研究設計（可借鑒方法）</div>
+            <div class="stance-desc">研究公司提交 SEC 評論信件的動機、有效性與股東價值影響。以 LLM 輔助文本分析 + citation tracking 分析信件立場。發現公司傾向提交「親管理層」信件（pro-management），被引用的信件更可能推動有利結果；但若 pro-management 信件被最終規則引用，公司的股票異常報酬顯著為負（CAR << 0）。</div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-name" style="margin-bottom:8px">對本研究的借鑒</div>
+            <div class="stance-desc">
+              <strong>Sophistication_Score</strong>：本文設計的 4 維 LLM 評分即參考此論文的文本複雜度衡量<br>
+              <strong>Citation Tracking</strong>：後續分析可追蹤哪些公司的信件被 USPTO 最終規則引用<br>
+              <strong>Negative CAR 機制</strong>：信件揭露公司對政策的敏感性 → 市場負向更新的核心邏輯<br>
+              <strong>Pro-management 類比</strong>：本研究的 Defensive（保護現有 IP rent）對應 SEC 研究的 pro-management
+            </div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">SEC 評論信件研究（方法可遷移至 USPTO）</span>
+          <span class="tag">LLM-assisted 文本分析 baseline</span>
+          <span class="tag">CAR 研究設計參考</span>
+          <span class="tag">Citation tracking 方法論</span>
+          <span class="tag">JEL: G18, G34, G38, D72, D78</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Table -->
+    <div style="margin-bottom:8px;margin-top:32px">
+      <span class="label-mono" style="color:var(--ink3)">語料庫快速索引</span>
+    </div>
+    <div class="card">
+      <div class="var-header-row" style="grid-template-columns: 40px 160px 130px 90px 110px 1fr">
+        <div class="var-header-col">#</div>
+        <div class="var-header-col">公司</div>
+        <div class="var-header-col">Docket</div>
+        <div class="var-header-col">頁數</div>
+        <div class="var-header-col">立場</div>
+        <div class="var-header-col">核心議題關鍵詞</div>
+      </div>
+      <div class="var-list">
+        <div class="var-row" style="grid-template-columns: 40px 160px 130px 90px 110px 1fr">
+          <div class="var-col"><span class="label-mono" style="font-size:10px">L01</span></div>
+          <div class="var-col"><div class="var-name">Mylan (Viatris)</div><div class="var-source">製藥·學名藥</div></div>
+          <div class="var-col"><span class="pill pill-teal" style="font-size:10px">PTO-P-2020-0022</span></div>
+          <div class="var-col"><span class="pill pill-gray">19p · 2023</span></div>
+          <div class="var-col"><span class="pill pill-neg">Offensive</span></div>
+          <div class="var-col"><div class="var-desc">反 Fintiv 成文化；反 For-profit 限制；IPR 是學名藥競爭工具</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns: 40px 160px 130px 90px 110px 1fr">
+          <div class="var-col"><span class="label-mono" style="font-size:10px">L02</span></div>
+          <div class="var-col"><div class="var-name">Dolby</div><div class="var-source">音訊·Patent Licensor</div></div>
+          <div class="var-col"><span class="pill pill-teal" style="font-size:10px">PTO-P-2020-0022</span></div>
+          <div class="var-col"><span class="pill pill-gray">8p · 2023</span></div>
+          <div class="var-col"><span class="pill pill-neg">Defensive</span></div>
+          <div class="var-col"><div class="var-desc">支持限制 for-profit 非市場競爭者；反 Compelling Merits 例外</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns: 40px 160px 130px 90px 110px 1fr">
+          <div class="var-col"><span class="label-mono" style="font-size:10px">L03</span></div>
+          <div class="var-col"><div class="var-name">Apple</div><div class="var-source">消費電子·NPE被告</div></div>
+          <div class="var-col"><span class="pill pill-teal" style="font-size:10px">PTO-P-2020-0022</span></div>
+          <div class="var-col"><span class="pill pill-gray">23p · 2023</span></div>
+          <div class="var-col"><span class="pill pill-neu">Offensive</span></div>
+          <div class="var-col"><div class="var-desc">反幾乎所有限制；有 TOC；法律引用密度最高；典型 NPE Victim</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns: 40px 160px 130px 90px 110px 1fr">
+          <div class="var-col"><span class="label-mono" style="font-size:10px">L04</span></div>
+          <div class="var-col"><div class="var-name">Dolby</div><div class="var-source">音訊·跟進評論</div></div>
+          <div class="var-col"><span class="pill pill-teal" style="font-size:10px">PTO-P-2023-0048</span></div>
+          <div class="var-col"><span class="pill pill-gray">3p · 2024</span></div>
+          <div class="var-col"><span class="pill pill-neg">Defensive</span></div>
+          <div class="var-col"><div class="var-desc">Serial Petition 定義問題；MemoryWeb 前例矛盾；跨 docket 追蹤</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns: 40px 160px 130px 90px 110px 1fr">
+          <div class="var-col"><span class="label-mono" style="font-size:10px">L05</span></div>
+          <div class="var-col"><div class="var-name">Inari Agriculture</div><div class="var-source">農業生技·新創</div></div>
+          <div class="var-col"><span class="pill pill-amber" style="font-size:10px">PTO-P-2024-0003</span></div>
+          <div class="var-col"><span class="pill pill-gray">2p · 2024</span></div>
+          <div class="var-col"><span class="pill pill-pos">支持（Offensive）</span></div>
+          <div class="var-col"><div class="var-desc">Patent Thicket 打擊農民；支持 TD NPRM；Entrant vs Incumbent</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns: 40px 160px 130px 90px 110px 1fr">
+          <div class="var-col"><span class="label-mono" style="font-size:10px">L06</span></div>
+          <div class="var-col"><div class="var-name">Ginkgo Bioworks</div><div class="var-source">合成生物·NYSE</div></div>
+          <div class="var-col"><span class="pill pill-amber" style="font-size:10px">PTO-P-2024-0003</span></div>
+          <div class="var-col"><span class="pill pill-gray">15p · 2024</span></div>
+          <div class="var-col"><span class="pill pill-neg">反對（Mixed）</span></div>
+          <div class="var-col"><div class="var-desc">Ultra vires；協作創新障礙；法院 vs USPTO 監管分工</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns: 40px 160px 130px 90px 110px 1fr">
+          <div class="var-col"><span class="label-mono" style="font-size:10px">L07</span></div>
+          <div class="var-col"><div class="var-name">Altria Group</div><div class="var-source">菸草·消費品</div></div>
+          <div class="var-col"><span class="pill pill-purple" style="font-size:10px">PTO-P-2025-0025</span></div>
+          <div class="var-col"><span class="pill pill-gray">6p · 2025</span></div>
+          <div class="var-col"><span class="pill pill-mixed">Mixed</span></div>
+          <div class="var-col"><div class="var-desc">支持效率目標；反對 estoppel 擴張、due process 問題</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns: 40px 160px 130px 90px 110px 1fr">
+          <div class="var-col"><span class="label-mono" style="font-size:10px">L08</span></div>
+          <div class="var-col"><div class="var-name">Intel Corporation</div><div class="var-source">半導體·製造</div></div>
+          <div class="var-col"><span class="pill pill-purple" style="font-size:10px">PTO-P-2025-0025</span></div>
+          <div class="var-col"><span class="pill pill-gray">17p · 2025</span></div>
+          <div class="var-col"><span class="pill pill-neg">強烈反對</span></div>
+          <div class="var-col"><div class="var-desc">反三項條款；IPR 已避免 $10億+ 損害；PAE 問題；Exec Summary</div></div>
+        </div>
+        <div class="var-row" style="grid-template-columns: 40px 160px 130px 90px 110px 1fr">
+          <div class="var-col"><span class="label-mono" style="font-size:10px">L09</span></div>
+          <div class="var-col"><div class="var-name">Target Corporation</div><div class="var-source">零售·商標</div></div>
+          <div class="var-col"><span class="pill pill-gray" style="font-size:10px">PTO-T-2018-0021</span></div>
+          <div class="var-col"><span class="pill pill-gray">3p · 2019</span></div>
+          <div class="var-col"><span class="pill pill-pos">支持</span></div>
+          <div class="var-col"><div class="var-desc">外國商標申請律師要求；Trademark docket（非 Patent）</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ────────────────── S1 核心立場變數 ────────────────── -->
+  <div id="s1" class="section">
+    <p class="section-intro">
+      立場變數是連結 letter 內容與 CARs 的核心橋梁。與 SEC 論文的「親股東 vs 親管理層」不同，patent reform 的核心張力是<strong>現有 IP rent 持有者 vs 潛在挑戰者</strong>。以下六個框架各有不同的理論詮釋與 CARs 預測方向，建議以框架 1 為主軸，框架 2 為異質性分析。
+    </p>
+
+    <div class="fw-comparison">
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num">01</div>
+          <div class="card-meta">
+            <div class="card-title-row">
+              <span class="card-title">Defensive vs Offensive</span>
+              <span class="pill rec">主推框架</span>
+            </div>
+            <div class="card-desc">保護現有 IP rent vs 爭取未來攻擊工具</div>
+          </div>
+        </div>
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-label-row">
+              <span class="stance-name">Defensive（= 1）</span>
+              <span class="pill pill-neg">CAR 顯著負</span>
+            </div>
+            <div class="stance-eg">e.g. Dolby — 反對 for-profit petitioner 限制</div>
+            <div class="stance-desc">提 letter 是為了保住現有授權收入與 patent portfolio 的市場地位。揭露的訊號是「我的 rent 正在被威脅」，市場對此重新定價政策風險暴露。</div>
+            <div class="mech"><span>市場機制</span>既有 IP 收入面臨系統性政策風險 → 折現率上升</div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-label-row">
+              <span class="stance-name">Offensive（= 0）</span>
+              <span class="pill pill-neu">CAR ≈ 0</span>
+            </div>
+            <div class="stance-eg">e.g. Apple — 反對限制 IPR 管道</div>
+            <div class="stance-desc">提 letter 是為了維持對競爭對手的挑戰能力。揭露的是策略意圖，不是現有 rent 受損，市場無明顯負向更新。</div>
+            <div class="mech"><span>市場機制</span>保留競爭工具屬中性訊號，無重大估值更新</div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">可連結 patent_intensity 做異質性分析</span>
+          <span class="tag">Story 2 直接對應</span>
+          <span class="tag">SEC 論文未涉及的 patent-specific 故事</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num">02</div>
+          <div class="card-meta">
+            <div class="card-title-row">
+              <span class="card-title">NPE Victim vs Patent Monetizer</span>
+              <span class="pill pill-teal">異質性主軸</span>
+            </div>
+            <div class="card-desc">被 troll 的科技公司 vs 靠授權賺錢的公司 — Story 4 核心</div>
+          </div>
+        </div>
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-label-row">
+              <span class="stance-name">NPE Victim（= 1）</span>
+              <span class="pill pill-neu">CAR ≈ 0</span>
+            </div>
+            <div class="stance-eg">e.g. 大型科技公司、製造商</div>
+            <div class="stance-desc">希望維持 IPR 管道打掉 NPE 武器。揭露「有訴訟風險要對沖」，但市場通常已 price in，邊際訊息有限。</div>
+            <div class="mech"><span>市場機制</span>NPE 訴訟風險常態化，letter 揭露無超額信息</div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-label-row">
+              <span class="stance-name">Patent Monetizer（= 0）</span>
+              <span class="pill pill-neg">CAR 顯著負</span>
+            </div>
+            <div class="stance-eg">e.g. Dolby、Qualcomm 授權部門型</div>
+            <div class="stance-desc">提 letter 支持強化保護，揭露收入結構高度依賴 patent enforcement。改革通過將直接衝擊核心商業模式。</div>
+            <div class="mech"><span>市場機制</span>Patent reform = 直接打擊授權收入 → 重新定價</div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">可用 RPX/Lex Machina 驗證 NPE history</span>
+          <span class="tag">redistribution 邏輯清晰</span>
+          <span class="tag">Story 4 識別機制</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num">03</div>
+          <div class="card-meta">
+            <div class="card-title-row">
+              <span class="card-title">Technology Creator vs Technology User</span>
+            </div>
+            <div class="card-desc">誰生產專利 vs 誰被專利卡住 — 行業異質性的自然載體</div>
+          </div>
+        </div>
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-label-row">
+              <span class="stance-name">Tech Creator（= 1）</span>
+              <span class="pill pill-neg">CAR 中等負</span>
+            </div>
+            <div class="stance-eg">e.g. 半導體、生技、音訊技術</div>
+            <div class="stance-desc">R&D 密集，專利組合是核心競爭資產。letter 揭露對政策結果的高敏感性。</div>
+            <div class="mech"><span>市場機制</span>揭露 IP 作為護城河，改革不確定性上升 → discount</div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-label-row">
+              <span class="stance-name">Tech User（= 0）</span>
+              <span class="pill pill-neu">CAR ≈ 0</span>
+            </div>
+            <div class="stance-eg">e.g. 零售、金融科技、服務業</div>
+            <div class="stance-desc">主要是 IP 使用者，改革對其是利多或中性。letter 揭露的邊際信息有限。</div>
+            <div class="mech"><span>市場機制</span>利多或中性，letter 不是壞消息</div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">可用 R&D/assets 量化</span>
+          <span class="tag">Story 1 補充維度</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num">04</div>
+          <div class="card-meta">
+            <div class="card-title-row">
+              <span class="card-title">Rent Concentration vs Rent Diversification</span>
+            </div>
+            <div class="card-desc">IP 收入佔比高 vs 多元收入結構 — 解釋 CAR 幅度的異質性</div>
+          </div>
+        </div>
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-label-row">
+              <span class="stance-name">Concentrated（= 1）</span>
+              <span class="pill pill-neg">CAR 強烈負</span>
+            </div>
+            <div class="stance-eg">e.g. 純授權公司</div>
+            <div class="stance-desc">主要收入來自 patent licensing，任何制度弱化是直接打擊。letter 傳遞「我全押在這個制度上」的訊號。</div>
+            <div class="mech"><span>市場機制</span>缺乏收入對沖，政策風險 = 系統性財務風險</div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-label-row">
+              <span class="stance-name">Diversified（= 0）</span>
+              <span class="pill pill-mixed">CAR 弱負</span>
+            </div>
+            <div class="stance-eg">e.g. Apple（主要收入是產品）</div>
+            <div class="stance-desc">專利是護城河之一但非主要收入。改革衝擊可被其他業務吸收，市場折現較小。</div>
+            <div class="mech"><span>市場機制</span>風險可分散，折現幅度較低</div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">可量化：patent_royalties / total_revenue</span>
+          <span class="tag">框架 1 的強化版</span>
+          <span class="tag">解釋 CAR magnitude 差異</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num">05</div>
+          <div class="card-meta">
+            <div class="card-title-row">
+              <span class="card-title">Incumbent vs Entrant</span>
+            </div>
+            <div class="card-desc">保護現有市場格局 vs 打破現有格局 — 唯一可能出現正 CAR 的框架</div>
+          </div>
+        </div>
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-label-row">
+              <span class="stance-name">Incumbent（= 1）</span>
+              <span class="pill pill-neg">CAR 負</span>
+            </div>
+            <div class="stance-eg">e.g. 成熟技術公司</div>
+            <div class="stance-desc">強專利制度保護現有市場地位，阻止競爭者進入。letter 揭露護城河高度依賴 IP 制度，一旦制度弱化，估值面臨重估。</div>
+            <div class="mech"><span>市場機制</span>護城河可持續性被質疑 → 重估長期估值</div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-label-row">
+              <span class="stance-name">Entrant（= 0）</span>
+              <span class="pill pill-pos">CAR 可能微正</span>
+            </div>
+            <div class="stance-eg">e.g. 新創、快速成長科技公司</div>
+            <div class="stance-desc">希望弱化競爭對手的 blocking patent，改革是結構性利好。letter 揭露主動進攻的戰略意圖。</div>
+            <div class="mech"><span>市場機制</span>制度弱化 = 市場開放機會，可能是正訊號</div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">可用公司年齡、市佔率代理</span>
+          <span class="tag">IO 文獻支撐（Schumpeter）</span>
+          <span class="tag">出現雙向 CAR 最有說服力</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num">06</div>
+          <div class="card-meta">
+            <div class="card-title-row">
+              <span class="card-title">Litigation Risk Imposer vs Risk Bearer</span>
+            </div>
+            <div class="card-desc">誰發動訴訟 vs 誰承擔訴訟成本 — 框架 2 的替代識別</div>
+          </div>
+        </div>
+        <div class="stance-grid">
+          <div class="stance-col">
+            <div class="stance-label-row">
+              <span class="stance-name">Risk Imposer（= 1）</span>
+              <span class="pill pill-neg">CAR 負</span>
+            </div>
+            <div class="stance-eg">e.g. 積極執法的 patent holder</div>
+            <div class="stance-desc">依賴訴訟或威脅訴訟收取 licensing fee。IPR 限制對其有利但提 letter 揭露了此商業模式的脆弱性。</div>
+            <div class="mech"><span>市場機制</span>一旦 IPR 被保留，訴訟策略失效 → 財務預期下修</div>
+          </div>
+          <div class="stance-col">
+            <div class="stance-label-row">
+              <span class="stance-name">Risk Bearer（= 0）</span>
+              <span class="pill pill-neu">CAR ≈ 0</span>
+            </div>
+            <div class="stance-eg">e.g. 高頻被告的科技公司</div>
+            <div class="stance-desc">希望保留 IPR 作為防禦武器。揭露的是管理訴訟成本的意圖，市場通常已 price in。</div>
+            <div class="mech"><span>市場機制</span>防禦成本已知，letter 帶來的信息更新有限</div>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">可用 USPTO litigation data 量化</span>
+          <span class="tag">與框架 2 互補</span>
+          <span class="tag">Story 4 替代識別</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ────────────────── S2 文本特徵變數 ────────────────── -->
+  <div id="s2" class="section">
+    <p class="section-intro">
+      文本特徵變數從 letter 本身提取，不需要外部資料庫匹配。主要用於 Story 3（issue-specific lobbying）和 Story 5（information content），也可作為 CARs 回歸的 cross-sectional moderator。
+    </p>
+
+    <div class="card">
+      <div class="var-header-row">
+        <div class="var-header-col">變數名稱</div>
+        <div class="var-header-col">類型</div>
+        <div class="var-header-col">定義與編碼方式</div>
+      </div>
+      <div class="var-list">
+
+        <div class="var-row">
+          <div class="var-col">
+            <div class="var-name">Letter_Length</div>
+            <div class="var-source">機器可讀</div>
+          </div>
+          <div class="var-col">
+            <span class="pill pill-blue">連續</span>
+          </div>
+          <div class="var-col">
+            <div class="var-desc">字數（word count）或頁數。Story 5 已指出 letter length 是資訊含量的代理變數。建議取 log(word count) 入回歸。備選：段落數、section 數。</div>
+          </div>
+        </div>
+
+        <div class="var-row">
+          <div class="var-col">
+            <div class="var-name">Legal_Specificity</div>
+            <div class="var-source">regex + LLM</div>
+          </div>
+          <div class="var-col">
+            <span class="pill pill-blue">連續</span>
+          </div>
+          <div class="var-col">
+            <div class="var-desc">引用特定法規條文（如 35 U.S.C. § 314(a)）及聯邦巡迴法院判決的數量。Apple letter 大量引用 AIA 條文與案例，是高 specificity 典型。法條引用數 + case law 引用數可加總或分開。</div>
+          </div>
+        </div>
+
+        <div class="var-row">
+          <div class="var-col">
+            <div class="var-name">Issue_Specificity</div>
+            <div class="var-source">regex + 人工</div>
+          </div>
+          <div class="var-col">
+            <span class="pill pill-blue">連續</span>
+          </div>
+          <div class="var-col">
+            <div class="var-desc">直接回應 USPTO 提問的具體問題數量（ANPRM 通常列出編號問題）。Story 3 指出「higher issue specificity」會強化負向 CAR 反應。可計算 letter 提及幾個 ANPRM 問題號碼。</div>
+          </div>
+        </div>
+
+        <div class="var-row">
+          <div class="var-col">
+            <div class="var-name">Has_TOC</div>
+            <div class="var-source">regex</div>
+          </div>
+          <div class="var-col">
+            <span class="pill pill-coral">Binary</span>
+          </div>
+          <div class="var-col">
+            <div class="var-desc">是否有目錄（Table of Contents）或 Executive Summary，代表 letter 的正式化程度與組織性。Apple letter 有完整 TOC，Intel letter 有 Executive Summary，Dolby 無。有結構化組織 = 1。</div>
+          </div>
+        </div>
+
+        <div class="var-row">
+          <div class="var-col">
+            <div class="var-name">Letter_Tone</div>
+            <div class="var-source">LLM 評分</div>
+          </div>
+          <div class="var-col">
+            <span class="pill pill-blue">連續 1–5</span>
+          </div>
+          <div class="var-col">
+            <div class="var-desc">量化立場的<strong>方向與力道</strong>（Opposition Strength）：強硬反對（1）→ 有條件支持（3）→ 積極背書（5）。注意：這個變數測的是「公司的立場有多強烈」，而不是文字的情緒本身。例如 Apple 這封信是強硬反對（= 1），但語氣是冷靜的技術性文體；Inari 是積極支持（= 5），但情緒上比 Apple 更激動。這個方向/力道的面向由 <code>Sentiment_Intensity</code> 另行補捉。可設計 binary：強硬反對 = 1 作為備選。</div>
+          </div>
+        </div>
+
+        <div class="var-row" style="background: #FAFFF7; border-left: 3px solid var(--accent-teal);">
+          <div class="var-col">
+            <div class="var-name">Sentiment_Intensity</div>
+            <div class="var-source">LLM 評分</div>
+          </div>
+          <div class="var-col">
+            <span class="pill pill-teal">連續 1–5</span>
+          </div>
+          <div class="var-col">
+            <div class="var-desc">量化文字的<strong>情緒激動程度</strong>，與 <code>Letter_Tone</code>（立場力道）互補但概念不同。評分標準：<br>
+            <strong>1 — 完全冷靜技術型</strong>：全篇法律/技術論述，幾乎無情緒性語言（e.g. Dolby L04）<br>
+            <strong>2 — 略有情緒底色</strong>：主體仍是技術論述，偶爾出現「concerning」「unfortunate」等用詞（e.g. Apple L03）<br>
+            <strong>3 — 情緒與論述並重</strong>：多次出現強烈形容詞，但整體仍在論點框架內（e.g. Altria L07）<br>
+            <strong>4 — 情緒主導</strong>：大量使用強烈措辭（「devastating」「undermine」「fundamentally wrong」），論述服務於情緒表達（e.g. Intel L08）<br>
+            <strong>5 — 高度情緒化</strong>：直接訴諸道德或利害關係人受害（「farmers are paying the price」「patients are dying」），情緒色彩壓過技術細節（e.g. Inari L05）<br><br>
+            <strong>與 Letter_Tone 的差異對比：</strong>Apple（Tone=1 強硬反對，Sentiment=2 冷靜）vs Inari（Tone=5 積極支持，Sentiment=5 激動）。<br>
+            <strong>研究假說</strong>：Sentiment_Intensity 高的 letter 可能傳遞更強的「公司感知威脅程度」訊號，在 Defensive 子樣本中預測更負的 CARs，獨立於立場方向之外。</div>
+          </div>
+        </div>
+
+        <div class="var-row">
+          <div class="var-col">
+            <div class="var-name">Sophistication_Score</div>
+            <div class="var-source">LLM 多維評分</div>
+          </div>
+          <div class="var-col">
+            <span class="pill pill-blue">連續 1–10</span>
+          </div>
+          <div class="var-col">
+            <div class="var-desc">參考 SSRN 論文（Du, Huang et al.）做法，用 LLM 評四個維度：(1) Substantiation — 是否援引實證/判決；(2) Expertise — patent law 深度；(3) Clarity — 論述清晰度；(4) Engagement — 是否直接回應 USPTO 提問。各 1–10 分，加總取均值。</div>
+          </div>
+        </div>
+
+        <div class="var-row">
+          <div class="var-col">
+            <div class="var-name">Ambiguity_Score</div>
+            <div class="var-source">LLM 評分</div>
+          </div>
+          <div class="var-col">
+            <span class="pill pill-blue">連續 0–1</span>
+          </div>
+          <div class="var-col">
+            <div class="var-desc">立場一致性評分：letter 是否在不同條文上持相互矛盾的立場（如 Intel 2025：整體支持強化，但反對某些 standing 限制）。用於 robustness check 中控制或刪除高模糊樣本。</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────────────── S3 企業特徵代理 ────────────────── -->
+  <div id="s3" class="section">
+    <p class="section-intro">
+      企業特徵代理變數分兩類：一是可直接從 letter 文本提取的自報資訊（不需外部資料庫），二是可連結 Compustat/USPTO 等外部資料的標準財務變數。後者才是 CARs 橫截面分析的核心 RHS 變數。
+    </p>
+
+    <div style="margin-bottom: 12px"><span class="label-mono" style="color:var(--ink3)">從 letter 本身提取</span></div>
+    <div class="card" style="margin-bottom: 24px">
+      <div class="var-header-row">
+        <div class="var-header-col">變數名稱</div>
+        <div class="var-header-col">來源</div>
+        <div class="var-header-col">說明</div>
+      </div>
+      <div class="var-list">
+        <div class="var-row">
+          <div class="var-col"><div class="var-name">Patent_Count_Mentioned</div><div class="var-source">regex</div></div>
+          <div class="var-col"><span class="pill pill-coral">自報數字</span></div>
+          <div class="var-col"><div class="var-desc">letter 中自報持有的專利數量（e.g. Dolby：「more than 2,500 United States Patents」）。作為 patent portfolio 規模的直接指標，不需外部匹配。</div></div>
+        </div>
+        <div class="var-row">
+          <div class="var-col"><div class="var-name">IPR_Experience</div><div class="var-source">regex + LLM</div></div>
+          <div class="var-col"><span class="pill pill-coral">自報數字</span></div>
+          <div class="var-col"><div class="var-desc">提及曾作為 petitioner 或 patent owner 參與 IPR/PGR 的次數（e.g. Dolby：「petitioner in twelve inter partes review proceedings」）。識別實際 PTAB 經驗。</div></div>
+        </div>
+        <div class="var-row">
+          <div class="var-col"><div class="var-name">Employee_Count_Mentioned</div><div class="var-source">regex</div></div>
+          <div class="var-col"><span class="pill pill-coral">自報數字</span></div>
+          <div class="var-col"><div class="var-desc">公司自報員工數（e.g. Dolby：「over 2,000 employees」；Apple：「more than 90,000 people in the U.S.」）。作為公司規模代理，可與 Compustat 員工數交叉驗證。</div></div>
+        </div>
+        <div class="var-row">
+          <div class="var-col"><div class="var-name">Industry_Self_ID</div><div class="var-source">LLM 分類</div></div>
+          <div class="var-col"><span class="pill pill-teal">類別</span></div>
+          <div class="var-col"><div class="var-desc">公司自我描述的行業類別（半導體、音訊技術、生物技術等）。用 LLM 標準化成 Fama-French 行業分類，便於後續固定效果分析。</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 12px"><span class="label-mono" style="color:var(--ink3)">連結外部資料庫</span></div>
+    <div class="card">
+      <div class="var-header-row">
+        <div class="var-header-col">變數名稱</div>
+        <div class="var-header-col">資料來源</div>
+        <div class="var-header-col">說明與角色</div>
+      </div>
+      <div class="var-list">
+        <div class="var-row">
+          <div class="var-col"><div class="var-name">Patent_Intensity</div><div class="var-source">KPSS / USPTO</div></div>
+          <div class="var-col"><span class="pill pill-blue">連續</span></div>
+          <div class="var-col"><div class="var-desc">patents / total assets。識別公司的 IP 密集度。在 CARs 回歸中作為核心 moderator：Defensive × Patent_Intensity 的交叉項預測更負的 CAR。</div></div>
+        </div>
+        <div class="var-row">
+          <div class="var-col"><div class="var-name">RD_Intensity</div><div class="var-source">Compustat</div></div>
+          <div class="var-col"><span class="pill pill-blue">連續</span></div>
+          <div class="var-col"><div class="var-desc">R&D expenditure / sales。R&D 密集度高的公司通常是「Technology Creator」，預測對 patent policy 更敏感。也是 Story 1 的核心代理變數。</div></div>
+        </div>
+        <div class="var-row">
+          <div class="var-col"><div class="var-name">NPE_Defendant_History</div><div class="var-source">Lex Machina / RPX</div></div>
+          <div class="var-col"><span class="pill pill-coral">Binary</span></div>
+          <div class="var-col"><div class="var-desc">公司在過去 N 年是否曾是 NPE 的被告。Story 4 的關鍵識別變數。NPE victim = 1，預測提 letter 支持弱化保護，且 CAR 接近零（市場已 price in 訴訟風險）。</div></div>
+        </div>
+        <div class="var-row">
+          <div class="var-col"><div class="var-name">Patent_Portfolio_Age</div><div class="var-source">USPTO PatentsView</div></div>
+          <div class="var-col"><span class="pill pill-blue">連續</span></div>
+          <div class="var-col"><div class="var-desc">平均專利申請年份距今的年數。識別「mature portfolio」公司——portfolio 越老，越接近 Story 2 的 defensive incumbent 邏輯，預測 CAR 更負。</div></div>
+        </div>
+        <div class="var-row">
+          <div class="var-col"><div class="var-name">Patent_Citation_Value</div><div class="var-source">KPSS measure</div></div>
+          <div class="var-col"><span class="pill pill-blue">連續</span></div>
+          <div class="var-col"><div class="var-desc">KPSS 衡量的 citation-weighted patent value。高 KPSS value 的公司，IP 資產的市場價值更高，也更容易在 patent reform 中受損，預測 CAR 更負（Story 1）。</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────────────── S4 AI Prompt 設計 ────────────────── -->
+  <div id="s4" class="section">
+    <p class="section-intro">
+      以下提供四個核心 prompt 的完整設計規格。每個 prompt 都需在 random sample（建議 30–50 封）上做人工驗證，計算 Cohen's kappa ≥ 0.75 才算通過。輸出格式統一使用 JSON，便於自動化管線處理。
+    </p>
+
+    <div class="prompt-card" style="margin-bottom: 16px">
+      <div class="prompt-header">
+        <span class="prompt-header-title">PROMPT 01 — Stance Classification</span>
+        <span class="prompt-badge" style="background:#1A6B54;color:#E0F0EA">核心分類</span>
+      </div>
+      <div class="prompt-body">
+<span class="cm">// System</span>
+<span class="kw">You are</span> a patent policy research assistant. Your task is to read
+a comment letter submitted to the USPTO and classify its stance.
+
+<span class="cm">// Classification rules</span>
+<span class="hl">DEFENSIVE (= 1)</span>: The firm is protecting EXISTING patent rents.
+Signs: opposes expanding IPR/PGR petitioner eligibility, supports
+discretionary denial, opposes non-market-competitor petitions,
+emphasizes protecting patent owner procedural rights, letter reveals
+that existing licensing income or market position is under threat.
+
+<span class="hl">OFFENSIVE (= 0)</span>: The firm seeks FUTURE strategic tools.
+Signs: opposes restrictions on challenger eligibility, emphasizes
+"bad patents" social cost, argues AIA intended open challenge system,
+firm is primarily an IPR petitioner not a patent licensor.
+
+<span class="hl">MIXED (= 2)</span>: Letter holds conflicting positions across provisions.
+
+<span class="cm">// Output format (JSON only, no preamble)</span>
+{
+  <span class="val">"stance"</span>: 0 | 1 | 2,
+  <span class="val">"rationale"</span>: <span class="kw">"&lt;≤30 words&gt;"</span>,
+  <span class="val">"confidence"</span>: 1–5,
+  <span class="val">"key_quotes"</span>: [<span class="kw">"&lt;supporting quote 1&gt;"</span>, <span class="kw">"&lt;quote 2&gt;"</span>]
+}
+
+<span class="cm">// Critical: Base classification solely on letter TEXT, not firm name.</span>
+      </div>
+    </div>
+
+    <div class="prompt-card" style="margin-bottom: 16px">
+      <div class="prompt-header">
+        <span class="prompt-header-title">PROMPT 02 — Sophistication Score</span>
+        <span class="prompt-badge" style="background:#185FA5;color:#E6F1FB">品質評分</span>
+      </div>
+      <div class="prompt-body">
+<span class="cm">// Score each dimension 1–10, then provide an overall score.</span>
+<span class="cm">// Higher = more sophisticated.</span>
+
+<span class="hl">Dimensions:</span>
+(1) <span class="val">Substantiation</span>: Does it support claims with empirical data,
+    legal precedents, or well-reasoned arguments?
+(2) <span class="val">Expertise</span>: Does it demonstrate deep knowledge of patent
+    law, PTAB procedures, or AIA legislative history?
+(3) <span class="val">Clarity</span>: Is the argument logically structured and readable?
+(4) <span class="val">Engagement</span>: Does it directly address specific USPTO questions,
+    provide constructive feedback, and make clear recommendations?
+
+<span class="cm">// Output format (JSON only)</span>
+{
+  <span class="val">"sub_substantiation"</span>: 1–10,
+  <span class="val">"sub_expertise"</span>: 1–10,
+  <span class="val">"sub_clarity"</span>: 1–10,
+  <span class="val">"sub_engagement"</span>: 1–10,
+  <span class="val">"overall"</span>: 1–10
+}
+      </div>
+    </div>
+
+    <div class="prompt-card" style="margin-bottom: 16px">
+      <div class="prompt-header">
+        <span class="prompt-header-title">PROMPT 03 — NPE Exposure Extraction</span>
+        <span class="prompt-badge" style="background:#993C1D;color:#FAECE7">立場識別</span>
+      </div>
+      <div class="prompt-body">
+<span class="cm">// Extract three binary indicators from the letter text.</span>
+
+<span class="hl">Indicators:</span>
+(a) <span class="val">npe_defendant</span>: Does the firm explicitly mention being sued
+    by NPEs / patent trolls / non-practicing entities? → 0 or 1
+
+(b) <span class="val">patent_enforcer</span>: Does the firm describe itself as a patent
+    licensor, collect royalties, or rely on patent enforcement as a
+    primary business activity? → 0 or 1
+
+(c) <span class="val">pro_ipr</span>: Does the firm explicitly state IPR is needed to
+    challenge "bad patents" or invalid claims? → 0 or 1
+
+<span class="cm">// Output format (JSON only)</span>
+{
+  <span class="val">"npe_defendant"</span>: 0 | 1,
+  <span class="val">"npe_defendant_quote"</span>: <span class="kw">"&lt;supporting quote or null&gt;"</span>,
+  <span class="val">"patent_enforcer"</span>: 0 | 1,
+  <span class="val">"patent_enforcer_quote"</span>: <span class="kw">"&lt;supporting quote or null&gt;"</span>,
+  <span class="val">"pro_ipr"</span>: 0 | 1,
+  <span class="val">"pro_ipr_quote"</span>: <span class="kw">"&lt;supporting quote or null&gt;"</span>
+}
+      </div>
+    </div>
+
+    <div class="prompt-card">
+      <div class="prompt-header">
+        <span class="prompt-header-title">PROMPT 04 — Ambiguity &amp; Tone</span>
+        <span class="prompt-badge" style="background:#444441;color:#F1EFE8">輔助評分</span>
+      </div>
+      <div class="prompt-body">
+<span class="cm">// Three scores. Ambiguity and Opposition Strength for robustness checks;
+// Sentiment Intensity is a NEW variable distinct from Opposition Strength.</span>
+
+<span class="hl">Score 1 — Ambiguity (0.0–1.0):</span>
+Does the letter hold internally contradictory positions on different
+provisions? 0 = fully consistent stance, 1 = highly contradictory.
+<span class="cm">// e.g. Intel 2025: supports strong patents overall but opposes
+// specific standing restrictions → ambiguity ~0.6</span>
+
+<span class="hl">Score 2 — Opposition Strength (1–5):</span>
+How strongly does the firm oppose the proposed rule?
+Focus on the DIRECTIONAL STANCE and its force, NOT the emotional tone.
+1 = strongly supports the proposal
+3 = conditional support / neutral
+5 = strongly opposes the proposal
+<span class="cm">// e.g. Apple = 1 (strongly opposes); Dolby L04 = 3 (neutral on most, focused on one point)</span>
+
+<span class="hl">Score 3 — Sentiment Intensity (1–5):</span>
+How emotionally charged is the LANGUAGE of the letter, regardless of stance?
+Focus on word choice, framing, and emotional appeals — NOT on whether the
+firm supports or opposes.
+1 = purely technical / legal writing, virtually no emotional language
+2 = mostly technical, occasional evaluative words ("concerning", "unfortunate")
+3 = emotional language present alongside legal arguments ("will harm", "unfair")
+4 = strongly charged language throughout ("devastating", "fundamentally wrong",
+    "undermine innovation")
+5 = direct appeals to stakeholder suffering or moral urgency
+    ("farmers are paying the price", "patients are denied access")
+<span class="cm">// Key distinction from Opposition Strength:
+// Apple L03: Opposition=1 (strongly against), Sentiment=2 (calm, lawyerly)
+// Inari L05: Opposition=5 (strongly for), Sentiment=5 (emotionally charged)
+// These two variables can move independently — that's the whole point.</span>
+
+<span class="cm">// Output format (JSON only)</span>
+{
+  <span class="val">"ambiguity"</span>: 0.0–1.0,
+  <span class="val">"ambiguity_reason"</span>: <span class="kw">"&lt;≤20 words or null&gt;"</span>,
+  <span class="val">"opposition_strength"</span>: 1–5,
+  <span class="val">"sentiment_intensity"</span>: 1–5,
+  <span class="val">"sentiment_evidence"</span>: <span class="kw">"&lt;key phrase driving the score, ≤15 words&gt;"</span>
+}
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────────────── S5 故事 × 變數 ────────────────── -->
+  <div id="s5" class="section">
+    <p class="section-intro">
+      以下整理五個潛在故事設計與對應的立場變數、企業特徵變數、以及預測的 CARs 方向。每個故事都需要有清晰的「so what」——CARs 負/正的理論機制。
+    </p>
+
+    <div class="story-grid">
+
+      <div class="story-card">
+        <div class="story-card-header">
+          <div class="story-num">Story 1 · Patent Policy Exposure</div>
+          <div class="story-title">政策風險暴露揭露</div>
+          <div class="story-pred">CARs 顯著負，且與 patent intensity 成比例</div>
+        </div>
+        <div class="story-body">
+          <div class="story-var-row">
+            <span class="story-var-label">核心變數</span>
+            <div><span class="pill pill-coral" style="margin-right:4px">letter disclosure (event)</span><span class="pill pill-blue">Patent_Intensity</span></div>
+          </div>
+          <div class="story-var-row">
+            <span class="story-var-label">異質性</span>
+            <div><span class="pill pill-blue">KPSS patent value</span><span class="pill pill-blue" style="margin-left:4px">Tech Concentration</span></div>
+          </div>
+          <div class="story-logic">提交 letter 這個行為本身揭露公司對 patent policy 的敏感性超過市場預期。不需要立場分類，任何提 letter 的公司 CARs 都應為負，且 patent intensity 越高負得越多。</div>
+        </div>
+      </div>
+
+      <div class="story-card">
+        <div class="story-card-header">
+          <div class="story-num">Story 2 · Defensive Lobbying</div>
+          <div class="story-title">防禦性遊說揭露現有 rent 危機</div>
+          <div class="story-pred">Defensive CAR &lt;&lt; 0；Offensive CAR ≈ 0</div>
+        </div>
+        <div class="story-body">
+          <div class="story-var-row">
+            <span class="story-var-label">核心變數</span>
+            <div><span class="pill pill-coral">Stance = Defensive (1)</span></div>
+          </div>
+          <div class="story-var-row">
+            <span class="story-var-label">異質性</span>
+            <div><span class="pill pill-blue">Patent_Portfolio_Age</span><span class="pill pill-blue" style="margin-left:4px">Rent_Concentration</span></div>
+          </div>
+          <div class="story-logic">Defensive letter 揭露「我的現有 IP rent 正在被威脅」。Offensive letter 揭露的是未來策略意圖，市場無負向更新。差異是故事的核心 finding。</div>
+        </div>
+      </div>
+
+      <div class="story-card">
+        <div class="story-card-header">
+          <div class="story-num">Story 3 · Issue-Specific ≠ General Lobbying</div>
+          <div class="story-title">議題特殊性決定市場反應強度</div>
+          <div class="story-pred">Issue_Specificity 高 → CAR 更負</div>
+        </div>
+        <div class="story-body">
+          <div class="story-var-row">
+            <span class="story-var-label">核心變數</span>
+            <div><span class="pill pill-blue">Issue_Specificity</span><span class="pill pill-blue" style="margin-left:4px">Legal_Specificity</span></div>
+          </div>
+          <div class="story-var-row">
+            <span class="story-var-label">控制</span>
+            <div><span class="pill pill-gray">general lobbying expenditure</span></div>
+          </div>
+          <div class="story-logic">法條引用越多、越精確回應 USPTO 問題 → 揭露的訊息更有針對性 → 市場解讀為「公司真的受影響很深」→ CAR 更負。與一般性遊說（正向 CAR）形成對比。</div>
+        </div>
+      </div>
+
+      <div class="story-card">
+        <div class="story-card-header">
+          <div class="story-num">Story 4 · NPE Redistribution</div>
+          <div class="story-title">Patent reform 的租值再分配</div>
+          <div class="story-pred">Patent Monetizer CAR &lt;&lt; 0；NPE Victim CAR ≈ 0</div>
+        </div>
+        <div class="story-body">
+          <div class="story-var-row">
+            <span class="story-var-label">核心變數</span>
+            <div><span class="pill pill-coral">NPE_Exposure（二元）</span></div>
+          </div>
+          <div class="story-var-row">
+            <span class="story-var-label">外部驗證</span>
+            <div><span class="pill pill-blue">NPE_Defendant_History</span></div>
+          </div>
+          <div class="story-logic">Patent reform 是 NPE-defendant 科技公司 vs patent monetizer 之間的零和再分配。Letter 立場揭露公司在這場再分配的位置，市場重新定價 patent litigation risk。</div>
+        </div>
+      </div>
+
+      <div class="story-card" style="grid-column: 1 / -1">
+        <div class="story-card-header">
+          <div class="story-num">Story 5 · Information Content of Letters</div>
+          <div class="story-title">Letter 文本本身的信息含量</div>
+          <div class="story-pred">Sophistication 高、Length 長（conditional on Defensive）→ CAR 更負；Sentiment_Intensity 高（conditional on Defensive）→ CAR 更負</div>
+        </div>
+        <div class="story-body" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <div class="story-var-row">
+              <span class="story-var-label">核心變數</span>
+              <div><span class="pill pill-purple">Sophistication_Score</span><span class="pill pill-blue" style="margin-left:4px">Letter_Length (log)</span></div>
+            </div>
+            <div class="story-var-row">
+              <span class="story-var-label">補充</span>
+              <div><span class="pill pill-blue">Legal_Specificity</span><span class="pill pill-blue" style="margin-left:4px">Has_TOC</span></div>
+            </div>
+            <div class="story-var-row">
+              <span class="story-var-label">新增</span>
+              <div><span class="pill pill-teal">Sentiment_Intensity</span><span class="pill pill-gray" style="margin-left:4px">Letter_Tone（立場力道）</span></div>
+            </div>
+          </div>
+          <div class="story-logic" style="margin-top:0;padding-top:0;border-top:none">Cheap talk = 短、模糊、無法律引用。有實質信息的 letter = 長、有引用、有結構組織。Letter 品質越高，揭露的信息越可信，市場反應越強。<br><br>
+          <strong>新增假說：</strong>Sentiment_Intensity 高（語言情緒激動）在 Defensive 子樣本中預測更負的 CARs，獨立於 Sophistication 之外——情緒激動本身是「公司感知威脅程度」的訊號，而非資訊品質的代理。需與 Letter_Tone（立場力道）一起控制，以區分「情緒」vs「立場強度」各自的獨立效果。需在 Defensive 子樣本中測試才有意義。</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ────────────────── S6 資料處理 ────────────────── -->
+  <div id="s6" class="section">
+    <p class="section-intro">
+      資料處理層面有六個關鍵設計決策，每個都可能影響結果的識別強度。
+    </p>
+
+    <div class="note-grid">
+
+      <div class="note-card">
+        <div class="note-title"><span class="note-icon">OBS</span>觀測單位設定</div>
+        <div class="note-body">以 <strong>firm × docket</strong> 為 observation unit。同一家公司可能在不同 ANPRM 都提交 letter；跨 docket 分析需加 docket fixed effects 或在 firm level 聚集標準誤。若同一 docket 有多封 letter（罕見），取最長或最近一封。</div>
+      </div>
+
+      <div class="note-card">
+        <div class="note-title"><span class="note-icon">EVENT</span>事件日期識別</div>
+        <div class="note-body">USPTO comment period 結束後，所有 letters 在 regulations.gov 同日公開。這是群體事件（cluster event），需使用 Patell test 或 BMP test 控制橫截面相關性，避免低估標準誤。備選：使用公告日期而非公開日期。</div>
+      </div>
+
+      <div class="note-card">
+        <div class="note-title"><span class="note-icon">MIXED</span>Mixed Stance 處理</div>
+        <div class="note-body">主分析使用 dominant stance（overall 主要立場）作為 binary 變數。Supplementary analysis 引入 <code>Ambiguity_Score</code> 控制。Robustness check 中刪除 ambiguity ≥ 0.5 的樣本，確認結果穩健性。</div>
+      </div>
+
+      <div class="note-card">
+        <div class="note-title"><span class="note-icon">AI</span>LLM 編碼驗證</div>
+        <div class="note-body">所有 LLM 生成的變數（stance, sophistication, NPE indicators）需在 random sample 30–50 封上做人工驗證。Stance 分類目標 Cohen's kappa ≥ 0.75；連續分數目標 Spearman ρ ≥ 0.70。需在 appendix 完整展示 prompt 與驗證結果。</div>
+      </div>
+
+      <div class="note-card">
+        <div class="note-title"><span class="note-icon">CAR</span>Event Window 選擇</div>
+        <div class="note-body">建議 primary window 為 [−1, +1]，robustness 用 [−2, +2] 和 [0, +1]。Market-adjusted 與 industry-adjusted 均需報告（Fama-French 48 industry）。Standard errors double-clustered at firm and docket level。</div>
+      </div>
+
+      <div class="note-card">
+        <div class="note-title"><span class="note-icon">SAMPLE</span>樣本連結策略</div>
+        <div class="note-body">Letter 提交者名稱需與 CRSP/Compustat 做 fuzzy name matching，建議使用 OpenCorporates 或 SEC Edgar 作為橋接。只有成功匹配到上市公司的 letters 才能做 event study；未匹配樣本可用於 letter 文本特徵的描述性分析。</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showSection(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
